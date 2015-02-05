@@ -9,6 +9,26 @@ var routes = require('./routes/index');
 var product = require('./routes/product');
 
 var mongoose = require('mongoose');
+
+var db;
+
+var config = {
+    "USER"    : "",
+    "PASS"    : "",
+    "HOST"    : "ec2-54-186-25-151.us-west-2.compute.amazonaws.com",
+    "PORT"    : "27017",
+    "DATABASE" : "my_example"
+};
+
+var dbPath  =   "mongodb://"+config.USER + ":"+
+config.PASS + "@"+
+config.HOST + ":"+
+config.PORT + "/"+
+config.DATABASE;
+
+
+db = mongoose.connect(dbPath);
+
 mongoose.connect('mongodb://localhost/retailApp', function(err) {
                  if(err) {
                  console.log('connection error', err);
@@ -18,6 +38,9 @@ mongoose.connect('mongodb://localhost/retailApp', function(err) {
                  });
 
 var app = express();
+app.listen(8080);
+
+
 /*
 var xml2js = require('xml2js');
 var options = {
@@ -138,31 +161,19 @@ app.use(function(err, req, res, next) {
     });
 });
 
+//module.exports = app;
+console.log('starting Express (NodeJS) Web server');
+app.listen(8080);
+console.log('Webserverlistening on port 8080');
+
+
+/*
+
 //var productData = "<ProductList><Product><name>TestName</name><BrandList><Brand>Breville</Brand><Brand>TestBreville</Brand></BrandList></Product></ProductList>";
 var productData = "<BrandList><Brand>Breville</Brand><Brand>TestBreville</Brand></BrandList>";
 var xmlTest1 = "<someArray><item><some>data</some></item><item><some>data</some></item></someArray>";
 
 var js2xmlparser = require("js2xmlparser");
-
-/*
- <BrandList>
-    <item>
-    <Brand>Breville</Brand>
-    </item>
-    <item>
-    <Brand>TestBreville</Brand>
-    </item>
- </BrandList>
- 
- <someArray>
-    <item>
-        <some>data</some>
-    </item>
-    <item>
-        <some>data</some>
-    </item>
- </someArray>
- */
 
 var xml2js = require('xml2js');
 var options = {
@@ -170,7 +181,6 @@ var options = {
     attrkey : "@",
     explicitArray: false
 };
-
 
 var myJson =    {
                 name: 'TestName',
@@ -188,12 +198,6 @@ xmlParser.parseString(productData, function (err, result) {
                       //delete myJson['__v']
                       //console.log(js2xmlparser("root", myJson));
                       });
-/*xmlParser.parseString(xmlTest1, function (err, result) {
-                      inspect(result);
-                      console.log(js2xmlparser("root", result));
-                      });
-
-*/
 
 var testProductJson = {"@":   {
     "id":"123456",
@@ -228,19 +232,6 @@ function updateJSONElementString(fullJson, jsonElementToUpdate, findText, replac
     return editedJson;
 }
 
-/*
- var localJson = JSON.parse(JSON.stringify(result['prd:ProductList']['prd:Product']));
- var descriptions = localJson['prd:DescriptionList']['prd:Description'];
- 
- if (typeof descriptions.length == 'undefined') {
- var myString = "{\"prd:Description\":" + "[" + JSON.stringify(descriptions) + "]}";
- var myJsonString = JSON.parse(myString);
- delete localJson ['prd:DescriptionList'];
- localJson['prd:DescriptionList'] = myJsonString;
- }
- */
-
-
 var myLongHtmlXML = "<prd:ProductList><prd:Product><prd:Brand>Breville></prd:Brand><prd:DescriptionList><prd:Description type=\"short\"><Breville IKG832 Stainless Steel Illuminating Jug Kettle.</prd:Description><prd:Description type=\"long\">A+stylish+polished+stainless+steel+finish+with+high+performing+features+makes+the+IKG832+an+ideal+Breville+kettle+for+any+family.+With+a+1.5+litre+capacity%2C+dual+water+windows+for+accurate+filling+and+a+360+degree+base%2C+this+kettle+boils+fast+and+is+easy+to+clean.+3+kW.+1.5+litre+capacity.+Rapid+boil.+Boil+dry+protection+-+automatically+switches+off+when+the+kettle+is+empty.+Illuminated+water+window.+Blue+illumination+on+boiling.+Push+button+operated+lid.+360+degree+base.+EAN%3A+5011773053419.</prd:Description></prd:DescriptionList></prd:Product></prd:ProductList>"
 
 var myLongHtmlJSON = {
@@ -257,24 +248,6 @@ console.log(js2xmlparser("prd:Description", myLongHtmlJSON, options));
 
 
 var localString = JSON.stringify(testProductJson);
-
-/*
-console.log("Before");
-console.log(localString);
-
-var myType = "description_type";
-//var re = new RegExp(myType,"g");
-//var localString = localString.replace(re, "type");
-
-var localString = replaceText(myType, "type", localString);
-console.log("After");
-console.log(localString);
+var originalJson = JSON.parse(localString);
 */
 
-var originalJson = JSON.parse(localString);
-
-//console.log(originalJson);
-
-//updateJSONElementString(originalJson, "prd:DescriptionList", "description_type", "type");
-
-module.exports = app;
