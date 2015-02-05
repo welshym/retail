@@ -103,3 +103,16 @@ app.use(function(err, req, res, next) {
 console.log('starting Express (NodeJS) Web server');
 app.listen(8080);
 console.log('Webserverlistening on port 8080');
+
+
+
+var myLongHtmlXML = "<prd:ProductList><prd:Product><prd:Brand>Breville></prd:Brand><prd:DescriptionList><prd:Description type=\"short\"><Breville IKG832 Stainless Steel Illuminating Jug Kettle.</prd:Description><prd:Description type=\"long\">A+stylish+polished+stainless+steel+finish+with+high+performing+features+makes+the+IKG832+an+ideal+Breville+kettle+for+any+family.+With+a+1.5+litre+capacity%2C+dual+water+windows+for+accurate+filling+and+a+360+degree+base%2C+this+kettle+boils+fast+and+is+easy+to+clean.+3+kW.+1.5+litre+capacity.+Rapid+boil.+Boil+dry+protection+-+automatically+switches+off+when+the+kettle+is+empty.+Illuminated+water+window.+Blue+illumination+on+boiling.+Push+button+operated+lid.+360+degree+base.+EAN%3A+5011773053419.</prd:Description></prd:DescriptionList></prd:Product></prd:ProductList>"
+
+var myLongHtmlJSON = {
+    '#': '\n                %3Cp%3EA+stylish+polished+stainless+steel+finish+with+high+performing+features+makes+the+IKG832+an+ideal+Breville+kettle+for+any+family.+With+a+1.5+litre+capacity%2C+dual+water+windows+for+accurate+filling+and+a+360+degree+base%2C+this+kettle+boils+fast+and+is+easy+to+clean.%3C%2Fp%3E%3Cul%3E%3Cli%3E3+kW.%3C%2Fli%3E%3Cli%3E1.5+litre+capacity.%3C%2Fli%3E%3Cli%3ERapid+boil.%3C%2Fli%3E%3Cli%3EBoil+dry+protection+-+automatically+switches+off+when+the+kettle+is+empty.%3C%2Fli%3E%3Cli%3EIlluminated+water+window.%3C%2Fli%3E%3Cli%3EBlue+illumination+on+boiling.%3C%2Fli%3E%3Cli%3EPush+button+operated+lid.%3C%2Fli%3E%3Cli%3E360+degree+base.%3C%2Fli%3E%3Cli%3EEAN%3A+5011773053419.%3C%2Fli%3E%3C%2Ful%3E\n            ',
+    '@': { descriptiontype: 'longHtml' }
+};
+
+var options = { useCDATA: true };
+console.log("CDATA LONG HTML XML");
+console.log(js2xmlparser("prd:Description", myLongHtmlJSON, options));
