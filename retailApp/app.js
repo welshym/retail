@@ -27,9 +27,7 @@ config.PORT + "/"+
 config.DATABASE;
 
 
-db = mongoose.connect(dbPath);
-
-mongoose.connect('mongodb://localhost/retailApp', function(err) {
+db = mongoose.connect(dbPath, function(err) {
                  if(err) {
                  console.log('connection error', err);
                  } else {
