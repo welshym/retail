@@ -18,18 +18,10 @@ var js2xmlparser = require("js2xmlparser");
 router.get('/', function(req, res, next) {
            Product.find(function (err, products) {
                      if (err) return next(err);
-                        
-                        jsonString = cleanUpProductJson(products);
-                        
                         res.set('Content-Type', 'text/xml');
                         
-//                        var convert = require('data2xml')();
-//                        console.log("data2xml");
-//                        console.log(convert(jsonString));
-                        
-//                        var options = { useCDATA: true };
-//                        res.send(js2xmlparser("prd:ProductList", jsonString, options));
-                        res.send(js2xmlparser("prd:ProductList", jsonString));
+                        var cleanedUpJson = cleanUpProductJson(products);
+                        res.send(getProductXML(cleanedUpJson));
                      });
            });
 
@@ -43,10 +35,8 @@ router.get('/:id', function(req, res, next) {
     Product.findByProductId(searchIds, function (err, products) {
         if (err) return next(err);
            
-        jsonString = cleanUpProductJson(products);
-           
         res.set('Content-Type', 'text/xml');
-        res.send(js2xmlparser("prd:ProductList", jsonString));
+        res.send(getProductXML(cleanUpProductJson(products)));
     });
 });
 
@@ -84,19 +74,15 @@ router.post('/', function(req, res, next) {
                                   updatedJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
                                   makeIntoArray(updatedJson, 'prd:DescriptionList', 'prd:Description');
 
-                                  console.log("POST Model Data");
-                                  console.log(JSON.stringify(updatedJson));
-
                                   var localProd = new Product(updatedJson);
                                   localProd.save(function (err, post) {
                                                  if (err) return next(err);
                                                  
-                                                 console.log("POST Data");
-                                                 console.log(JSON.stringify(post));
                                                  postReplyJsonString = cleanUpProductJson(post);
                                                  
                                                  res.set('Content-Type', 'text/xml');
                                                  res.send(js2xmlparser("prd:ProductList", postReplyJsonString));
+//                                                 res.send(getProductXML(cleanUpProductJson(postReplyJsonString)));
                                                  });
                                   });
             
@@ -141,13 +127,45 @@ function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
 
 }
 
+function getProductXML(productJson) {
+    
+    var sourceLongHTMLJS = [];
+    var options = {
+                    useCDATA: true,
+                    declaration: { include : false }
+    };
+    
+    for (i = 0; i < productJson['prd:Product'].length; i++) {
+        for (j = 0; j < productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'].length; j++) {
+            if (productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['@']['type'] == "longHtml") {
+                productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'] = productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'].trim();
+                sourceLongHTMLJS.push(productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]);
+                productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['@']['type'] = "longHtml"+i;
+                productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'] = productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'] + "MCWTEST" + i;
+                break;
+            }
+        }
+    }
+  
+    var sourceProductXMLString = js2xmlparser("prd:ProductList", JSON.stringify(productJson));
+    for (i = 0; i < sourceLongHTMLJS.length; i++) {
+        replacementText = js2xmlparser("prd:Description", JSON.stringify(sourceLongHTMLJS[i]), options);
+        console.log("\n\nreplacementText");
+        console.log(replacementText);
+        
+        var typeString = "longHtml" + i;
+        var re = new RegExp("<prd:Description type=\""+typeString+"\">[\x00-\xff]*MCWTEST" + i + "<\/prd:Description>");
+        sourceProductXMLString = sourceProductXMLString.replace(re, replacementText);
+        sourceProductXMLString = sourceProductXMLString.replace(typeString, "longHtml");
+        sourceProductXMLString = sourceProductXMLString.replace("MCWTEST" + i, "");
+    }
+
+    return sourceProductXMLString
+}
+
+
+
 function cleanUpProductJson(sourceJson) {
-    
-    
-// TO DO NEED TO HANDLE CDATA IN HERE ADD <![CDATA[ to the start and ]] to the end
-// TO DO MANAGE CHANGING THE DESCRIPTION TYPE BACK
-    
-    
     var localProds = JSON.parse(JSON.stringify(sourceJson));
     
     if (localProds.length != undefined) {
@@ -158,10 +176,6 @@ function cleanUpProductJson(sourceJson) {
             delete localProds[i]["_id"];
         
             for (j = 0; j < localProds[i]['prd:DescriptionList']['prd:Description'].length; j++) {
-                if (localProds[i]['prd:DescriptionList']['prd:Description'][j]['@']['descriptiontype'] == "longHtml") {
-                    console.log("LONG HTML JSON:");
-                    console.log(localProds[i]['prd:DescriptionList']['prd:Description'][j]);
-                }
                 delete localProds[i]['prd:DescriptionList']['prd:Description'][j]["_id"];
             }
             
