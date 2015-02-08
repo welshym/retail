@@ -16,22 +16,42 @@ var js2xmlparser = require("js2xmlparser");
 
 /* GET /product listing. */
 router.get('/', function(req, res, next) {
-           Product.find(function (err, products) {
-                     if (err) return next(err);
+
+           if (typeof req.query['id'] != 'undefined') {
+                var searchIds = [];
+                searchIds = searchIds.concat(req.query['id']);
+           
+                Product.findByProductId(searchIds, function (err, products) {
+                                   if (err) return next(err);
+                                   
+                                   res.set('Content-Type', 'text/xml');
+                                   res.send(getProductXML(cleanUpProductJson(products)));
+                                   });
+
+           }
+           else {
+                Product.find(function (err, products) {
+                        if (err) return next(err);
                         res.set('Content-Type', 'text/xml');
                         
                         var cleanedUpJson = cleanUpProductJson(products);
                         res.send(getProductXML(cleanedUpJson));
-                     });
+                        });
+           
+           }
+           
+           
+           
            });
 
 /* GET /product/id */
 router.get('/:id', function(req, res, next) {
     var searchIds = [req.params.id];
+           
     if (typeof req.query['id'] != 'undefined') {
            searchIds = searchIds.concat(req.query['id']);
     }
-    
+           
     Product.findByProductId(searchIds, function (err, products) {
         if (err) return next(err);
            
@@ -62,7 +82,6 @@ router.delete('/:id', function(req, res, next) {
 
 /* POST /product */
 router.post('/', function(req, res, next) {
-            console.log("Request body is: ", req.body);
             if (JSON.stringify(req.body) == '{}')
             {
             var inspect = require('eyes').inspector({maxLength: false})
@@ -78,11 +97,8 @@ router.post('/', function(req, res, next) {
                                   localProd.save(function (err, post) {
                                                  if (err) return next(err);
                                                  
-                                                 postReplyJsonString = cleanUpProductJson(post);
-                                                 
                                                  res.set('Content-Type', 'text/xml');
-                                                 res.send(js2xmlparser("prd:ProductList", postReplyJsonString));
-//                                                 res.send(getProductXML(cleanUpProductJson(postReplyJsonString)));
+                                                 res.send(getProductXML(cleanUpProductJson(post)));
                                                  });
                                   });
             
@@ -150,8 +166,6 @@ function getProductXML(productJson) {
     var sourceProductXMLString = js2xmlparser("prd:ProductList", JSON.stringify(productJson));
     for (i = 0; i < sourceLongHTMLJS.length; i++) {
         replacementText = js2xmlparser("prd:Description", JSON.stringify(sourceLongHTMLJS[i]), options);
-        console.log("\n\nreplacementText");
-        console.log(replacementText);
         
         var typeString = "longHtml" + i;
         var re = new RegExp("<prd:Description type=\""+typeString+"\">[\x00-\xff]*MCWTEST" + i + "<\/prd:Description>");
@@ -192,7 +206,7 @@ function cleanUpProductJson(sourceJson) {
         }
         var updatedJson = updateJSONElementString(localProds, "prd:DescriptionList", "descriptiontype", "type");
         
-        var myJsonString = {"prd:Product" : updatedJson};
+        var myJsonString = {"prd:Product" : [updatedJson]};
         
     }
     return myJsonString;
