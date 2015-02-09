@@ -34,9 +34,15 @@ router.get('/', function(req, res, next) {
                         if (err) return next(err);
                         res.set('Content-Type', 'text/xml');
                         
-                        var cleanedUpJson = cleanUpProductJson(products);
-                        res.send(getProductXML(cleanedUpJson));
-                        });
+                        console.log("Find by single ID");
+                        if (products['id'] != 'undefined') {
+                             var cleanedUpJson = cleanUpProductJson(products);
+                             res.send(getProductXML(cleanedUpJson));
+                        } else {
+                             console.log(JSON.stringify(products));
+                             res.status(404).end();
+                        }
+                });
            
            }
            
@@ -54,9 +60,17 @@ router.get('/:id', function(req, res, next) {
            
     Product.findByProductId(searchIds, function (err, products) {
         if (err) return next(err);
-           
+        
         res.set('Content-Type', 'text/xml');
-        res.send(getProductXML(cleanUpProductJson(products)));
+                            
+        console.log("Find by single ID");
+        if (products['id'] != 'undefined') {
+            var cleanedUpJson = cleanUpProductJson(products);
+            res.send(getProductXML(cleanedUpJson));
+        } else {
+            console.log(JSON.stringify(products));
+            res.status(404).end();
+        }
     });
 });
 
