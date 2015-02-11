@@ -31,12 +31,11 @@ ProductSchema.static('findByBrand', function (searchBrand, callback) {
               });
 
 ProductSchema.static('findByProductId', function (searchIds, callback) {
-                     console.log("searchIDs");
-                     console.log(searchIds);
                      return this.find( { "prd:ProductId" : { $in : searchIds}}, callback);
                      });
 
 ProductSchema.static('findAndRemoveByProductId', function (searchId, callback) {
+                     
                      var productsToRemove = this.find( { "prd:ProductId" : searchId});
                      
                      productsToRemove.remove({ "prd:ProductId" : searchId}, callback);
