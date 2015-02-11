@@ -22,11 +22,17 @@ router.get('/', function(req, res, next) {
                 searchIds = searchIds.concat(req.query['id']);
            
                 Product.findByProductId(searchIds, function (err, products) {
-                                   if (err) return next(err);
+                        if (err) return next(err);
                                    
-                                   res.set('Content-Type', 'text/xml');
-                                   res.send(getProductXML(cleanUpProductJson(products)));
-                                   });
+                        if (products.length != 0) {
+                            var cleanedUpJson = cleanUpProductJson(products);
+                            res.send(getProductXML(cleanedUpJson));
+                        } else {
+                            var messageStr = "Product " + searchIds + " not found";
+                            res.send(createErrorMessage (messageStr, "404"))
+                            res.status(404).end();
+                        }
+                });
 
            }
            else {
@@ -34,12 +40,12 @@ router.get('/', function(req, res, next) {
                         if (err) return next(err);
                         res.set('Content-Type', 'text/xml');
                         
-                        console.log("Find by single ID");
-                        if (products['id'] != 'undefined') {
+                        if (products.length != 0) {
                              var cleanedUpJson = cleanUpProductJson(products);
                              res.send(getProductXML(cleanedUpJson));
                         } else {
-                             console.log(JSON.stringify(products));
+                             var messageStr = "Products not found";
+                             res.send(createErrorMessage (messageStr, "404"))
                              res.status(404).end();
                         }
                 });
@@ -63,12 +69,12 @@ router.get('/:id', function(req, res, next) {
         
         res.set('Content-Type', 'text/xml');
                             
-        console.log("Find by single ID");
-        if (products['id'] != 'undefined') {
+        if (products.length != 0) {
             var cleanedUpJson = cleanUpProductJson(products);
             res.send(getProductXML(cleanedUpJson));
         } else {
-            console.log(JSON.stringify(products));
+            var messageStr = "Product " + searchIds + " not found";
+            res.send(createErrorMessage (messageStr, "404"))
             res.status(404).end();
         }
     });
@@ -86,45 +92,54 @@ router.put('/:id', function(req, res, next) {
 /* DELETE /product/:id */
 router.delete('/:id', function(req, res, next) {
               Product.findAndRemoveByProductId(req.params.id, function (err, products) {
-                                      if (err) return next(err);
-                                      
-                                               console.log("delete");
-                                               console.log(products);
-                                               res.status(204).end();
-                                      });
+                    if (err) return next(err);
+                                               
+                    if (products != 0) {
+                        res.status(204).end();
+                    } else {
+                        var messageStr = "Product " + req.params.id + " not found";
+                        res.send(createErrorMessage (messageStr, "404"))
+                        res.status(404).end();
+                    }
+                    });
               });
 
 /* POST /product */
 router.post('/', function(req, res, next) {
-            if (JSON.stringify(req.body) == '{}')
-            {
-            var inspect = require('eyes').inspector({maxLength: false})
-            xmlParser.parseString(req.rawData, function (err, result) {
-
-                                  var originalJson = JSON.parse(JSON.stringify(result['prd:ProductList']['prd:Product']));
-                                  var updatedJson = updateJSONElementString(originalJson, "prd:DescriptionList", "type", "descriptiontype");
-                                  
-                                  updatedJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
-                                  makeIntoArray(updatedJson, 'prd:DescriptionList', 'prd:Description');
-
-                                  var localProd = new Product(updatedJson);
-                                  localProd.save(function (err, post) {
-                                                 if (err) return next(err);
-                                                 
-                                                 res.set('Content-Type', 'text/xml');
-                                                 res.send(getProductXML(cleanUpProductJson(post)));
-                                                 });
-                                  });
             
-            }
-            else
-            {
-            Product.create(req.body, function (err, post) {
+    if (JSON.stringify(req.body) == '{}')
+    {
+        var inspect = require('eyes').inspector({maxLength: false})
+        xmlParser.parseString(req.rawData, function (err, result) {
+
+            var originalJson = JSON.parse(JSON.stringify(result['prd:ProductList']['prd:Product']));
+            var updatedJson = updateJSONElementString(originalJson, "prd:DescriptionList", "type", "descriptiontype");
+                                  
+            updatedJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
+            makeIntoArray(updatedJson, 'prd:DescriptionList', 'prd:Description');
+
+            var localProd = new Product(updatedJson);
+            
+            Product.findByProductId([result['prd:ProductList']['prd:Product']['@']['id']], function (err, products) {
+            
+                if (products.length == 0) {
+                    localProd.save(function (err, post) {
                         if (err) return next(err);
-                        res.json(post);
-                        });
-            }
+                                                   
+                        res.set('Content-Type', 'text/xml');
+                        res.send(getProductXML(cleanUpProductJson(post)));
+                    });
+                } else {
+                    var messageStr = "Product " + updatedJson['prd:ProductId'] + " already exists";
+                    res.send(createErrorMessage (messageStr, "404"))
+                    res.status(404).end();
+                }
             });
+                              
+        });
+    }
+});
+
 
 function replaceText(findText, replacementText, sourceString) {
     var re = new RegExp(findText,"g");
@@ -224,6 +239,18 @@ function cleanUpProductJson(sourceJson) {
         
     }
     return myJsonString;
+}
+
+
+function createErrorMessage (messageString, errorCode) {
+    
+    var errorString = "<rsp:Error xmlns:rsp=\"http://schemas.homeretailgroup.com/response\" xsi:schemaLocation=\"http://schemas.homeretailgroup.com/response group-response-v1.xsd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n";
+    
+    errorString += "<rsp:Code>" + errorCode + "</rsp:Code>";
+    errorString += "<rsp:Message>" + messageString + "</rsp:Message>";
+    errorString += "</rsp:Error>";
+    
+    return errorString;
 }
 
 
