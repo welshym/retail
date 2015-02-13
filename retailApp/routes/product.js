@@ -26,11 +26,11 @@ router.get('/', function(req, res, next) {
                                    
                         if (products.length != 0) {
                             var cleanedUpJson = cleanUpProductJson(products);
+                            shortenProductResponse(cleanedUpJson);
                             res.send(getProductXML(cleanedUpJson));
                         } else {
                             var messageStr = "Product " + searchIds + " not found";
-                            res.send(createErrorMessage (messageStr, "404"))
-                            res.status(404).end();
+                            res.status(404).send(createErrorMessage (messageStr, "404"));
                         }
                 });
 
@@ -42,11 +42,11 @@ router.get('/', function(req, res, next) {
                         
                         if (products.length != 0) {
                              var cleanedUpJson = cleanUpProductJson(products);
+                             shortenProductResponse(cleanedUpJson);
                              res.send(getProductXML(cleanedUpJson));
                         } else {
                              var messageStr = "Products not found";
-                             res.send(createErrorMessage (messageStr, "404"))
-                             res.status(404).end();
+                             res.status(404).send(createErrorMessage (messageStr, "404"));
                         }
                 });
            
@@ -61,7 +61,7 @@ router.get('/:id', function(req, res, next) {
     var searchIds = [req.params.id];
            
     if (typeof req.query['id'] != 'undefined') {
-           searchIds = searchIds.concat(req.query['id']);
+        searchIds = searchIds.concat(req.query['id']);
     }
            
     Product.findByProductId(searchIds, function (err, products) {
@@ -74,8 +74,7 @@ router.get('/:id', function(req, res, next) {
             res.send(getProductXML(cleanedUpJson));
         } else {
             var messageStr = "Product " + searchIds + " not found";
-            res.send(createErrorMessage (messageStr, "404"))
-            res.status(404).end();
+            res.status(404).send(createErrorMessage (messageStr, "404"));
         }
     });
 });
@@ -91,18 +90,28 @@ router.put('/:id', function(req, res, next) {
 
 /* DELETE /product/:id */
 router.delete('/:id', function(req, res, next) {
-              Product.findAndRemoveByProductId(req.params.id, function (err, products) {
-                    if (err) return next(err);
+    if (req.params.id == "") {
+        var messageStr = "Product " + req.params.id + " not defined";
+        res.status(400).send(createErrorMessage (messageStr, "400"));
+    }
+
+    Product.findAndRemoveByProductId(req.params.id, function (err, products) {
+        if (err) return next(err);
                                                
-                    if (products != 0) {
-                        res.status(204).end();
-                    } else {
-                        var messageStr = "Product " + req.params.id + " not found";
-                        res.send(createErrorMessage (messageStr, "404"))
-                        res.status(404).end();
-                    }
-                    });
-              });
+        if (products != 0) {
+            res.status(204).end();
+        } else {
+            var messageStr = "Product " + req.params.id + " not found";
+            res.status(404).send(createErrorMessage (messageStr, "404"));
+        }
+    });
+});
+
+router.delete('/', function(req, res, next) {
+    var messageStr = "Product not defined";
+    res.status(400).send(createErrorMessage (messageStr, "400"));
+});
+
 
 /* POST /product */
 router.post('/', function(req, res, next) {
@@ -112,27 +121,50 @@ router.post('/', function(req, res, next) {
         var inspect = require('eyes').inspector({maxLength: false})
         xmlParser.parseString(req.rawData, function (err, result) {
 
-            var originalJson = JSON.parse(JSON.stringify(result['prd:ProductList']['prd:Product']));
-            var updatedJson = updateJSONElementString(originalJson, "prd:DescriptionList", "type", "descriptiontype");
-                                  
-            updatedJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
-            makeIntoArray(updatedJson, 'prd:DescriptionList', 'prd:Description');
+            var requestJson = JSON.parse(JSON.stringify(result['prd:ProductList']['prd:Product']));
+            updateJSONElementString(requestJson, "prd:DescriptionList", "type", "descriptionType");
+            updateJSONElementString(requestJson, "prd:PurchasingOptions", "type", "optionType");
+            updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "contentType");
+            updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "subContentType");
+            updateJSONElementString(requestJson, "prd:RelatedProducts", "type", "relatedType");
+            updateJSONElementString(requestJson, "prd:PricingInformation", "type", "commentaryType");
+                              
+            requestJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
+            makeIntoArray(requestJson, 'prd:DescriptionList', 'prd:Description');
+            makeIntoArray(requestJson, 'prd:PurchasingOptions', 'prd:Option');
+            makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
+            if (typeof requestJson['prd:PricingInformation']['prc:Price'].length != 0) {
+                for (i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
+                    makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
+                }
+            } else {
+                makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
+            }
 
-            var localProd = new Product(updatedJson);
+            makeIntoArray(requestJson, 'prd:RelatedProducts', 'prd:Product');
+            makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
+            
+            if (typeof requestJson['prd:AssociatedMedia']['prd:Content'].length != 0) {
+                for (i = 0; i < requestJson['prd:AssociatedMedia']['prd:Content'].length; i++) {
+                    makeIntoArray(requestJson['prd:AssociatedMedia']['prd:Content'], i, 'prd:SubContent');
+                }
+            } else {
+                makeIntoArray(requestJson['prd:AssociatedMedia'], 'prd:Content', 'prd:SubContent');
+            }
+                              
+            var localProd = new Product(requestJson);
             
             Product.findByProductId([result['prd:ProductList']['prd:Product']['@']['id']], function (err, products) {
             
                 if (products.length == 0) {
                     localProd.save(function (err, post) {
                         if (err) return next(err);
-                                                   
                         res.set('Content-Type', 'text/xml');
                         res.send(getProductXML(cleanUpProductJson(post)));
                     });
                 } else {
                     var messageStr = "Product " + updatedJson['prd:ProductId'] + " already exists";
-                    res.send(createErrorMessage (messageStr, "404"))
-                    res.status(404).end();
+                    res.status(404).send(createErrorMessage (messageStr, "404"));
                 }
             });
                               
@@ -150,26 +182,33 @@ function replaceText(findText, replacementText, sourceString) {
 function updateJSONElementString(fullJson, jsonElementToUpdate, findText, replacementText) {
     
     var stringJson = JSON.stringify(fullJson[jsonElementToUpdate]);
-    var editedJson =  fullJson;
     
     stringJson = replaceText(findText, replacementText, stringJson);
-    delete editedJson[jsonElementToUpdate];
-    editedJson[jsonElementToUpdate] = JSON.parse(stringJson);
-    
-    return editedJson;
+    delete fullJson[jsonElementToUpdate];
+    fullJson[jsonElementToUpdate] = JSON.parse(stringJson);
 }
 
 function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
     var elementToMod = fullJsonToModify[rootElement][changeElement];
-    var editedJson = fullJsonToModify;
-    if (typeof fullJsonToModify[rootElement][changeElement].length == 'undefined') {
-        var myString = "{\"" + changeElement + "\":" + "[" + JSON.stringify(fullJsonToModify[rootElement][changeElement]) + "]}";
-        var myJsonString = JSON.parse(myString);
-        delete editedJson [rootElement];
-        editedJson[rootElement] = myJsonString;
-    }
-    return editedJson
 
+    if (typeof fullJsonToModify[rootElement][changeElement] == 'undefined') {
+        return
+    }
+    
+    if (typeof fullJsonToModify[rootElement][changeElement].length == 'undefined') {
+        
+        var attributesString = "";
+        if (fullJsonToModify[rootElement]['@'] != undefined) {
+            attributesString = "\"@\" : " + JSON.stringify(fullJsonToModify[rootElement]['@']) + ",";
+        }
+        
+        var myString = "{" + attributesString + "\"" + changeElement + "\":" + "[" + JSON.stringify(fullJsonToModify[rootElement][changeElement]) + "]}";
+        var myJsonString = JSON.parse(myString);
+
+        delete fullJsonToModify [rootElement];
+        
+        fullJsonToModify[rootElement] = myJsonString;
+    }
 }
 
 function getProductXML(productJson) {
@@ -180,7 +219,7 @@ function getProductXML(productJson) {
                     declaration: { include : false }
     };
     
-    for (i = 0; i < productJson['prd:Product'].length; i++) {
+    for (i = 0; i < productJson['prd:Product'].length; i++) {        
         for (j = 0; j < productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'].length; j++) {
             if (productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['@']['type'] == "longHtml") {
                 productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'] = productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'].trim();
@@ -206,7 +245,36 @@ function getProductXML(productJson) {
     return sourceProductXMLString
 }
 
+function productJsonUpdate(productJson) {
+    delete productJson["prd:ProductId"];
+    delete productJson["__v"];
+    delete productJson["_id"];
+    
+    removeId(productJson, 'prd:DescriptionList', 'prd:Description');
+    updateJSONElementString(productJson, "prd:DescriptionList", "descriptionType", "type");
+    
+    removeId(productJson, 'prd:PurchasingOptions', 'prd:Option');
+    updateJSONElementString(productJson, "prd:PurchasingOptions", "optionType", "type");
+    
+    removeId(productJson, 'prd:PricingInformation', 'prc:Price');
+    updateJSONElementString(productJson, "prd:PricingInformation", "priceType", "type");
 
+    for (j = 0; j < productJson['prd:PricingInformation']['prc:Price'].length; j++) {
+        removeId(productJson['prd:PricingInformation']['prc:Price'], j, 'prc:Commentary');
+    }
+    updateJSONElementString(productJson, "prd:PricingInformation", "commentaryType", "type");
+    
+    removeId(productJson, 'prd:AssociatedMedia', 'prd:Content');
+    updateJSONElementString(productJson, "prd:AssociatedMedia", "contentType", "type");
+    
+    for (j = 0; j < productJson['prd:AssociatedMedia']['prd:Content'].length; j++) {
+        removeId(productJson['prd:AssociatedMedia']['prd:Content'], j, 'prd:SubContent');
+    }
+    updateJSONElementString(productJson, "prd:AssociatedMedia", "subContentType", "type");
+
+    removeId(productJson, 'prd:RelatedProducts', 'prd:Product');
+    updateJSONElementString(productJson, "prd:RelatedProducts", "relatedType", "type");
+}
 
 function cleanUpProductJson(sourceJson) {
     var localProds = JSON.parse(JSON.stringify(sourceJson));
@@ -214,31 +282,24 @@ function cleanUpProductJson(sourceJson) {
     if (localProds.length != undefined) {
         var myJsonString = {"prd:Product" : [] };
         for (i = 0; i < localProds.length; i++) {
-            delete localProds[i]["prd:ProductId"];
-            delete localProds[i]["__v"];
-            delete localProds[i]["_id"];
-        
-            for (j = 0; j < localProds[i]['prd:DescriptionList']['prd:Description'].length; j++) {
-                delete localProds[i]['prd:DescriptionList']['prd:Description'][j]["_id"];
-            }
-            
-            var updatedJson = updateJSONElementString(localProds[i], "prd:DescriptionList", "descriptiontype", "type");
-            myJsonString["prd:Product"].push(updatedJson)
+            productJsonUpdate(localProds[i]);
+            myJsonString["prd:Product"].push(localProds[i])
         }
     } else {
-        delete localProds["prd:ProductId"];
-        delete localProds["__v"];
-        delete localProds["_id"];
-        
-        for (j = 0; j < localProds['prd:DescriptionList']['prd:Description'].length; j++) {
-            delete localProds['prd:DescriptionList']['prd:Description'][j]["_id"];
-        }
-        var updatedJson = updateJSONElementString(localProds, "prd:DescriptionList", "descriptiontype", "type");
-        
-        var myJsonString = {"prd:Product" : [updatedJson]};
-        
+        productJsonUpdate(localProds);
+        myJsonString = {"prd:Product" : [localProds]};
     }
     return myJsonString;
+}
+
+function removeId(jsonElement, rootElement, contentElement) {
+    if (typeof jsonElement[rootElement][contentElement] != 'undefined') {
+        for (removeCount = 0; removeCount < jsonElement[rootElement][contentElement].length; removeCount++) {
+            delete jsonElement[rootElement][contentElement][removeCount]["_id"];
+        }
+    }
+    
+    return jsonElement;
 }
 
 
@@ -253,6 +314,35 @@ function createErrorMessage (messageString, errorCode) {
     return errorString;
 }
 
+function removeProductArrayElements(productsJson) {
+    delete productsJson['prd:RelatedProducts'];
+    
+    var descriptionLoop = productsJson['prd:DescriptionList']['prd:Description'].length
+    while (descriptionLoop--) {
+        if (productsJson['prd:DescriptionList']['prd:Description'][descriptionLoop]['@']['type'] == "long") {
+            productsJson['prd:DescriptionList']['prd:Description'].splice(descriptionLoop, 1);
+        } else {
+            if (productsJson['prd:DescriptionList']['prd:Description'][descriptionLoop]['@']['type'] == "longHtml") {
+                productsJson['prd:DescriptionList']['prd:Description'].splice(descriptionLoop, 1);
+            }
+        }
+    }
+    
+}
+
+function shortenProductResponse(fullProductJson) {
+    
+    var shortenLoop;
+    var descriptionLoop;
+
+    if (fullProductJson['prd:Product'].length != undefined) {
+        for (shortenLoop = 0; shortenLoop < fullProductJson['prd:Product'].length; shortenLoop++) {
+            removeProductArrayElements(fullProductJson['prd:Product'][shortenLoop])
+        }
+    } else {
+        removeProductArrayElements(fullProductJson['prd:Product'])
+    }
+}
 
 module.exports = router;
 
@@ -270,8 +360,8 @@ module.exports = router;
  "prd:DescriptionList":
  
  {"prd:Description": [
- {  "@" : { "descriptiontype" : "123456"}, "#" : "Test Description"},
- {  "@" : { "descriptiontype" : "1234567"}, "#" : "Test Description 2"}
+ {  "@" : { "descriptionType" : "123456"}, "#" : "Test Description"},
+ {  "@" : { "descriptionType" : "1234567"}, "#" : "Test Description 2"}
  ]
  }
  };
