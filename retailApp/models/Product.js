@@ -19,6 +19,7 @@ var ProductSchema = new mongoose.Schema(
                 },
         "prd:Brand" : String,
         "prd:ProductId" : String,
+        "prd:FalconEligible" : String,
         "prd:DescriptionList" : { "prd:Description" : [{
                                                         "@": {"descriptionType": String},
                                                         "#": String
