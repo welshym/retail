@@ -120,7 +120,6 @@ router.post('/', function(req, res, next) {
     {
         var inspect = require('eyes').inspector({maxLength: false})
         xmlParser.parseString(req.rawData, function (err, result) {
-
             var requestJson = JSON.parse(JSON.stringify(result['prd:ProductList']['prd:Product']));
             updateJSONElementString(requestJson, "prd:DescriptionList", "type", "descriptionType");
             updateJSONElementString(requestJson, "prd:PurchasingOptions", "type", "optionType");
@@ -163,7 +162,7 @@ router.post('/', function(req, res, next) {
                         res.send(getProductXML(cleanUpProductJson(post)));
                     });
                 } else {
-                    var messageStr = "Product " + updatedJson['prd:ProductId'] + " already exists";
+                    var messageStr = "Product " + requestJson['prd:ProductId'] + " already exists";
                     res.status(404).send(createErrorMessage (messageStr, "404"));
                 }
             });
@@ -219,7 +218,7 @@ function getProductXML(productJson) {
                     declaration: { include : false }
     };
     
-    for (i = 0; i < productJson['prd:Product'].length; i++) {        
+    for (i = 0; i < productJson['prd:Product'].length; i++) {
         for (j = 0; j < productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'].length; j++) {
             if (productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['@']['type'] == "longHtml") {
                 productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'] = productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'].trim();
@@ -249,6 +248,14 @@ function productJsonUpdate(productJson) {
     delete productJson["prd:ProductId"];
     delete productJson["__v"];
     delete productJson["_id"];
+    
+    
+    if (typeof productJson["prd:FalconEligible"] == 'undefined') {
+        console.log("Not Falcon eligible");
+        productJson["prd:FalconEligible"] = "false";
+    } else {
+        console.log("Falcon eligible");
+    }
     
     removeId(productJson, 'prd:DescriptionList', 'prd:Description');
     updateJSONElementString(productJson, "prd:DescriptionList", "descriptionType", "type");
