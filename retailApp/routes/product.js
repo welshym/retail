@@ -126,31 +126,18 @@ router.post('/', function(req, res, next) {
             updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "contentType");
             updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "subContentType");
             updateJSONElementString(requestJson, "prd:RelatedProducts", "type", "relatedType");
+            updateJSONElementString(requestJson, "prd:PricingInformation", "type", "priceType");
             updateJSONElementString(requestJson, "prd:PricingInformation", "type", "commentaryType");
                               
             requestJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
             makeIntoArray(requestJson, 'prd:DescriptionList', 'prd:Description');
             makeIntoArray(requestJson, 'prd:PurchasingOptions', 'prd:Option');
+            makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
             makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
-            if (typeof requestJson['prd:PricingInformation']['prc:Price'].length != 0) {
-                for (i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
-                    makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
-                }
-            } else {
-                makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
-            }
-
             makeIntoArray(requestJson, 'prd:RelatedProducts', 'prd:Product');
             makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
-            
-            if (typeof requestJson['prd:AssociatedMedia']['prd:Content'].length != 0) {
-                for (i = 0; i < requestJson['prd:AssociatedMedia']['prd:Content'].length; i++) {
-                    makeIntoArray(requestJson['prd:AssociatedMedia']['prd:Content'], i, 'prd:SubContent');
-                }
-            } else {
-                makeIntoArray(requestJson['prd:AssociatedMedia'], 'prd:Content', 'prd:SubContent');
-            }
-                              
+            makeIntoArray(requestJson['prd:AssociatedMedia'], 'prd:Content', 'prd:SubContent');
+
             var localProd = new Product(requestJson);
             
             Product.findByProductId([result['prd:ProductList']['prd:Product']['@']['id']], function (err, products) {
@@ -186,7 +173,7 @@ function updateJSONElementString(fullJson, jsonElementToUpdate, findText, replac
     delete fullJson[jsonElementToUpdate];
     fullJson[jsonElementToUpdate] = JSON.parse(stringJson);
 }
-
+/*
 function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
     var elementToMod = fullJsonToModify[rootElement][changeElement];
 
@@ -209,6 +196,27 @@ function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
         fullJsonToModify[rootElement] = myJsonString;
     }
 }
+*/
+
+function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
+    var elementToMod = fullJsonToModify[rootElement][changeElement];
+    
+    if (typeof fullJsonToModify[rootElement][changeElement] == 'undefined') {
+        return
+    }
+    
+    if (typeof fullJsonToModify[rootElement][changeElement].length == 'undefined') {
+        
+        var myString = "[" + JSON.stringify(fullJsonToModify[rootElement][changeElement]) + "]";
+        var myJsonString = JSON.parse(myString);
+        
+        delete fullJsonToModify[rootElement][changeElement];
+        
+        fullJsonToModify[rootElement][changeElement] = myJsonString;
+    }
+}
+
+
 
 function getProductXML(productJson) {
     

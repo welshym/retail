@@ -22,8 +22,9 @@ var ProductSchema = new mongoose.Schema(
         "prd:FalconEligible" : String,
         "prd:DescriptionList" : { "prd:Description" : [{
                                                         "@": {"descriptionType": String},
-                                                        "#": String
+                                                        "#": String,
                                                        } ]},
+        "prd:ReturnsPolicy" : String,
         "prd:PurchasingOptions" : { "prd:Option" : [{
                                                     "@": {"optionType": String},
                                                     "prd:Commentary" : String,
@@ -35,19 +36,19 @@ var ProductSchema = new mongoose.Schema(
                                                                 }
                                                     }]},
         "prd:PricingInformation" : { "prc:Price" : [{
-                                                    "@": {"priceType": String},
-                                                    "prc:Commentary" : [{
-                                                                            "@" : {
-                                                                                    "commentaryType" : String
+                                                        "@": {"priceType": String},
+                                                        "prc:Commentary" : [{
+                                                                                "@" : {
+                                                                                        "commentaryType" : String,
                                                                                   },
-                                                                            "#" : String
-                                                                        }],
-                                                    "prc:Amount" : { "@": {
-                                                                            "currency": String,
-                                                                            "inclusiveOfTax": String
-                                                                        },
-                                                                    "#" : String
-                                                                }
+                                                                                "#" : String,
+                                                                            }],
+                                                        "prc:Amount" : {        "@": {
+                                                                                        "currency": String,
+                                                                                        "inclusiveOfTax": String,
+                                                                                    },
+                                                                                "#" : String,
+                                                                        }
                                                     }]},
                                         
                                         
@@ -63,7 +64,7 @@ var ProductSchema = new mongoose.Schema(
                                                                     "contentType" : String,
                                                                     "href" : String,
                                                                     "usage" : String,
-                                                                    "provider" : String
+                                                                    "provider" : String,
                                                                 },
                                                             "prd:SubContent" : [{
                                                                                     "@" : {
@@ -71,9 +72,13 @@ var ProductSchema = new mongoose.Schema(
                                                                                     "subContentType" : String,
                                                                                     "href" : String,
                                                                                     "usage" : String,
-                                                                                    "provider" : String
+                                                                                    "provider" : String,
                                                                                 }
-                                                                             }]
+                                                                             }],
+                                                         "prd:Description" : String,
+                                                         "prd:Size" : {
+                                                                        "prd:Duration" : String,
+                                                         }
                                                         }],
                                 },
         "prd:RelatedProducts" : { "prd:Product" : [{
@@ -87,15 +92,30 @@ var ProductSchema = new mongoose.Schema(
                                                                  },
                                                             "#" : String
                                                         }]
-                                }
+                                },
+        "prm:RelatedPromotions" : { "prm:Promotion" : [{
+                                                            "@" : {
+                                                                    "uri" : String,
+                                                                    "brand" : String,
+                                                                    "index" : String,
+                                                                    "id" : String,
+                                                                    "version" : String
+                                                                },
+                                                            "prm:DescriptionList" : { "prm:Description" : [{
+                                                                                                            "#": String
+                                                                                                           }]}
+                                                       }]
+                                        }
     });
 
 /*
  
- <prd:RelatedProducts>
- <prd:Product uri="http://api.homeretailgroup.com:1210/product/argos/8832438" type="warranty" brand="argos" index="0" id="8832438" version="2">3 Years Replacement Product Care on this Product.</prd:Product>
- </prd:RelatedProducts>
- </prd:Product>
+ <prm:RelatedPromotions>
+ <prm:Promotion uri="http://api.homeretailgroup.com:1210/promotion/argos/E17047" brand="argos" index="0" id="E17047" version="2">
+ <prm:DescriptionList>
+ <prm:Description>Buy+any+selected+TV+%26+get+%C2%A310+off+Now+TV+Box.</prm:Description>
+ </prm:DescriptionList>
+ </prm:Promotion>
  
  */
 
