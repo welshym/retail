@@ -130,14 +130,38 @@ router.post('/', function(req, res, next) {
             updateJSONElementString(requestJson, "prd:PricingInformation", "type", "commentaryType");
                               
             requestJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
+                              
             makeIntoArray(requestJson, 'prd:DescriptionList', 'prd:Description');
             makeIntoArray(requestJson, 'prd:PurchasingOptions', 'prd:Option');
-            makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
-            makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
             makeIntoArray(requestJson, 'prd:RelatedProducts', 'prd:Product');
-            makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
-            makeIntoArray(requestJson['prd:AssociatedMedia'], 'prd:Content', 'prd:SubContent');
+            
+            if (isArray(requestJson['prd:PricingInformation']['prc:Price'])) {
+                for (i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
+                    makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
+                }
+            } else {
+                makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
+            }
+            makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
 
+            if (isArray(requestJson['prd:AssociatedMedia']['prc:Content'])) {
+                for (i = 0; i < requestJson['prd:AssociatedMedia']['prc:Content'].length; i++) {
+                    makeIntoArray(requestJson['prd:AssociatedMedia']['prc:Content'], i, 'prd:SubContent');
+                }
+            } else {
+                makeIntoArray(requestJson['prd:AssociatedMedia'], 'prc:Content', 'prd:SubContent');
+            }
+            makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
+
+            if (isArray(requestJson['prm:RelatedPromotions']['prm:Promotion'])) {
+                for (i = 0; i < requestJson['prm:RelatedPromotions']['prm:Promotion'].length; i++) {
+                    makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], i, 'prm:DescriptionList');
+                }
+            } else {
+                makeIntoArray(requestJson['prm:RelatedPromotions'], 'prm:Promotion', 'prm:DescriptionList');
+            }
+            makeIntoArray(requestJson, 'prm:RelatedPromotions', 'prm:Promotion');
+                              
             var localProd = new Product(requestJson);
             
             Product.findByProductId([result['prd:ProductList']['prd:Product']['@']['id']], function (err, products) {
@@ -167,55 +191,40 @@ function replaceText(findText, replacementText, sourceString) {
 
 function updateJSONElementString(fullJson, jsonElementToUpdate, findText, replacementText) {
     
+    if (typeof fullJson[jsonElementToUpdate] == 'undefined') {
+        return
+    }
+    console.log(fullJson[jsonElementToUpdate]);
+    
     var stringJson = JSON.stringify(fullJson[jsonElementToUpdate]);
     
     stringJson = replaceText(findText, replacementText, stringJson);
     delete fullJson[jsonElementToUpdate];
     fullJson[jsonElementToUpdate] = JSON.parse(stringJson);
 }
-/*
-function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
-    var elementToMod = fullJsonToModify[rootElement][changeElement];
 
-    if (typeof fullJsonToModify[rootElement][changeElement] == 'undefined') {
-        return
-    }
-    
-    if (typeof fullJsonToModify[rootElement][changeElement].length == 'undefined') {
-        
-        var attributesString = "";
-        if (fullJsonToModify[rootElement]['@'] != undefined) {
-            attributesString = "\"@\" : " + JSON.stringify(fullJsonToModify[rootElement]['@']) + ",";
-        }
-        
-        var myString = "{" + attributesString + "\"" + changeElement + "\":" + "[" + JSON.stringify(fullJsonToModify[rootElement][changeElement]) + "]}";
-        var myJsonString = JSON.parse(myString);
-
-        delete fullJsonToModify [rootElement];
-        
-        fullJsonToModify[rootElement] = myJsonString;
-    }
+function isArray(what) {
+    return Object.prototype.toString.call(what) === '[object Array]';
 }
-*/
 
 function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
-    var elementToMod = fullJsonToModify[rootElement][changeElement];
     
-    if (typeof fullJsonToModify[rootElement][changeElement] == 'undefined') {
+    if ((typeof fullJsonToModify == 'undefined') ||
+        (typeof fullJsonToModify[rootElement] == 'undefined') ||
+        (typeof fullJsonToModify[rootElement][changeElement] == 'undefined')){
         return
     }
     
-    if (typeof fullJsonToModify[rootElement][changeElement].length == 'undefined') {
+    if (!isArray(fullJsonToModify[rootElement][changeElement])) {
         
         var myString = "[" + JSON.stringify(fullJsonToModify[rootElement][changeElement]) + "]";
         var myJsonString = JSON.parse(myString);
-        
-        delete fullJsonToModify[rootElement][changeElement];
+                
+        delete fullJsonToModify [rootElement][changeElement];
         
         fullJsonToModify[rootElement][changeElement] = myJsonString;
     }
 }
-
 
 
 function getProductXML(productJson) {
@@ -227,6 +236,7 @@ function getProductXML(productJson) {
     };
     
     for (i = 0; i < productJson['prd:Product'].length; i++) {
+        
         for (j = 0; j < productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'].length; j++) {
             if (productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['@']['type'] == "longHtml") {
                 productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'] = productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'].trim();
@@ -257,14 +267,6 @@ function productJsonUpdate(productJson) {
     delete productJson["__v"];
     delete productJson["_id"];
     
-    
-    if (typeof productJson["prd:FalconEligible"] == 'undefined') {
-        console.log("Not Falcon eligible");
-        productJson["prd:FalconEligible"] = "false";
-    } else {
-        console.log("Falcon eligible");
-    }
-    
     removeId(productJson, 'prd:DescriptionList', 'prd:Description');
     updateJSONElementString(productJson, "prd:DescriptionList", "descriptionType", "type");
     
@@ -289,7 +291,29 @@ function productJsonUpdate(productJson) {
 
     removeId(productJson, 'prd:RelatedProducts', 'prd:Product');
     updateJSONElementString(productJson, "prd:RelatedProducts", "relatedType", "type");
+
+    removeId(productJson, 'prm:RelatedPromotions', 'prm:Promotion');
+    if (isArray(productJson['prm:RelatedPromotions']['prm:Promotion'])) {
+        for (j = 0; j < productJson['prm:RelatedPromotions']['prm:Promotion'].length; j++) {
+            removeId(productJson['prm:RelatedPromotions']['prm:Promotion'], j, 'prm:DescriptionList');
+        }
+    }
 }
+
+function removeId(jsonElement, rootElement, contentElement) {
+    if (typeof jsonElement[rootElement][contentElement] != 'undefined') {
+        if (isArray(jsonElement[rootElement][contentElement])) {
+            for (removeCount = 0; removeCount < jsonElement[rootElement][contentElement].length; removeCount++) {
+                delete jsonElement[rootElement][contentElement][removeCount]["_id"];
+            }
+        } else {
+            delete jsonElement[rootElement][contentElement]["_id"];
+        }
+    }
+    
+    return jsonElement;
+}
+
 
 function cleanUpProductJson(sourceJson) {
     var localProds = JSON.parse(JSON.stringify(sourceJson));
@@ -305,16 +329,6 @@ function cleanUpProductJson(sourceJson) {
         myJsonString = {"prd:Product" : [localProds]};
     }
     return myJsonString;
-}
-
-function removeId(jsonElement, rootElement, contentElement) {
-    if (typeof jsonElement[rootElement][contentElement] != 'undefined') {
-        for (removeCount = 0; removeCount < jsonElement[rootElement][contentElement].length; removeCount++) {
-            delete jsonElement[rootElement][contentElement][removeCount]["_id"];
-        }
-    }
-    
-    return jsonElement;
 }
 
 
