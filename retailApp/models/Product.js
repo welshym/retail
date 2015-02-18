@@ -101,9 +101,7 @@ var ProductSchema = new mongoose.Schema(
                                                                     "id" : String,
                                                                     "version" : String
                                                                 },
-                                                            "prm:DescriptionList" : { "prm:Description" : [{
-                                                                                                            "#": String
-                                                                                                           }]}
+                                                            "prm:DescriptionList" : [{ "prm:Description" : String }]
                                                        }]
                                         }
     });
