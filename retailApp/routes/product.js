@@ -153,14 +153,17 @@ router.post('/', function(req, res, next) {
             }
             makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
 
-            if (isArray(requestJson['prm:RelatedPromotions']['prm:Promotion'])) {
-                for (i = 0; i < requestJson['prm:RelatedPromotions']['prm:Promotion'].length; i++) {
-                    makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], i, 'prm:DescriptionList');
+            // Do we have any promotions?
+            if (typeof requestJson['prm:RelatedPromotions'] != 'undefined') {
+                if (isArray(requestJson['prm:RelatedPromotions']['prm:Promotion'])) {
+                    for (i = 0; i < requestJson['prm:RelatedPromotions']['prm:Promotion'].length; i++) {
+                        makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], i, 'prm:DescriptionList');
+                    }
+                } else {
+                    makeIntoArray(requestJson['prm:RelatedPromotions'], 'prm:Promotion', 'prm:DescriptionList');
                 }
-            } else {
-                makeIntoArray(requestJson['prm:RelatedPromotions'], 'prm:Promotion', 'prm:DescriptionList');
+                makeIntoArray(requestJson, 'prm:RelatedPromotions', 'prm:Promotion');
             }
-            makeIntoArray(requestJson, 'prm:RelatedPromotions', 'prm:Promotion');
                               
             var localProd = new Product(requestJson);
             
@@ -194,7 +197,6 @@ function updateJSONElementString(fullJson, jsonElementToUpdate, findText, replac
     if (typeof fullJson[jsonElementToUpdate] == 'undefined') {
         return
     }
-    console.log(fullJson[jsonElementToUpdate]);
     
     var stringJson = JSON.stringify(fullJson[jsonElementToUpdate]);
     
