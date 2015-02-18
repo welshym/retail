@@ -16,6 +16,7 @@ var js2xmlparser = require("js2xmlparser");
 
 /* GET /product listing. */
 router.get('/', function(req, res, next) {
+           res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
 
            if (typeof req.query['id'] != 'undefined') {
                 var searchIds = [];
@@ -38,7 +39,6 @@ router.get('/', function(req, res, next) {
            else {
                 Product.find(function (err, products) {
                         if (err) return next(err);
-                        res.set('Content-Type', 'text/xml');
                         
                         if (products.length != 0) {
                              var cleanedUpJson = cleanUpProductJson(products);
@@ -58,6 +58,7 @@ router.get('/', function(req, res, next) {
 
 /* GET /product/id */
 router.get('/:id', function(req, res, next) {
+    res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
     var searchIds = [req.params.id];
            
     if (typeof req.query['id'] != 'undefined') {
@@ -67,7 +68,6 @@ router.get('/:id', function(req, res, next) {
     Product.findByProductId(searchIds, function (err, products) {
         if (err) return next(err);
         
-        res.set('Content-Type', 'text/xml');
                             
         if (products.length != 0) {
             var cleanedUpJson = cleanUpProductJson(products);
@@ -81,6 +81,8 @@ router.get('/:id', function(req, res, next) {
 
 /* PUT /product/:id */
 router.put('/:id', function(req, res, next) {
+    res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
+           
     Product.findByIdAndUpdate(req.params.id, req.body, function (err, post) {
                               
         if (err) return next(err);
@@ -90,6 +92,8 @@ router.put('/:id', function(req, res, next) {
 
 /* DELETE /product/:id */
 router.delete('/:id', function(req, res, next) {
+    res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
+              
     if (req.params.id == "") {
         var messageStr = "Product " + req.params.id + " not defined";
         res.status(400).send(createErrorMessage (messageStr, "400"));
@@ -97,7 +101,7 @@ router.delete('/:id', function(req, res, next) {
 
     Product.findAndRemoveByProductId(req.params.id, function (err, products) {
         if (err) return next(err);
-                                               
+                                     
         if (products != 0) {
             res.status(204).end();
         } else {
@@ -108,6 +112,7 @@ router.delete('/:id', function(req, res, next) {
 });
 
 router.delete('/', function(req, res, next) {
+    res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
     var messageStr = "Product not defined";
     res.status(400).send(createErrorMessage (messageStr, "400"));
 });
@@ -115,6 +120,7 @@ router.delete('/', function(req, res, next) {
 
 /* POST /product */
 router.post('/', function(req, res, next) {
+    res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
             
     if (JSON.stringify(req.body) == '{}')
     {
