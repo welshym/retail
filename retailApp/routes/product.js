@@ -310,6 +310,10 @@ function productJsonUpdate(productJson) {
     delete productJson["__v"];
     delete productJson["_id"];
     
+    if (typeof productJson['prd:FalconEligible'] == 'undefined') {
+        productJson['prd:FalconEligible'] = 'false';
+    }
+
     removeId(productJson, 'prd:DescriptionList', 'prd:Description');
     updateJSONElementString(productJson, "prd:DescriptionList", "descriptionType", "type");
     
