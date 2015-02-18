@@ -1,3 +1,4 @@
+var compress = require('compression');
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -59,6 +60,7 @@ app.set('view engine', 'ejs');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(__dirname + '/public/favicon.ico'));
+app.use(compress());
 app.use(logger('dev'));
 app.use(myRawParser);
 app.use(bodyParser.json());
