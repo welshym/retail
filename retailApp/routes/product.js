@@ -17,7 +17,7 @@ var js2xmlparser = require("js2xmlparser");
 /* GET /product listing. */
 router.get('/', function(req, res, next) {
            res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
-
+           res.set('Cache-Control', 'max-age=86400');
            if (typeof req.query['id'] != 'undefined') {
                 var searchIds = [];
                 searchIds = searchIds.concat(req.query['id']);
@@ -59,6 +59,8 @@ router.get('/', function(req, res, next) {
 /* GET /product/id */
 router.get('/:id', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
+    res.set('Cache-Control', 'max-age=86400');
+    
     var searchIds = [req.params.id];
            
     if (typeof req.query['id'] != 'undefined') {
@@ -82,6 +84,7 @@ router.get('/:id', function(req, res, next) {
 /* PUT /product/:id */
 router.put('/:id', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
+    res.set('Cache-Control', 'max-age=86400');
            
     Product.findByIdAndUpdate(req.params.id, req.body, function (err, post) {
                               
@@ -93,6 +96,7 @@ router.put('/:id', function(req, res, next) {
 /* DELETE /product/:id */
 router.delete('/:id', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
+    res.set('Cache-Control', 'no-cache');
               
     if (req.params.id == "") {
         var messageStr = "Product " + req.params.id + " not defined";
@@ -113,6 +117,8 @@ router.delete('/:id', function(req, res, next) {
 
 router.delete('/', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
+    res.set('Cache-Control', 'no-cache');
+              
     var messageStr = "Product not defined";
     res.status(400).send(createErrorMessage (messageStr, "400"));
 });
@@ -121,6 +127,7 @@ router.delete('/', function(req, res, next) {
 /* POST /product */
 router.post('/', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.product; version=2; format=xml ; charset=UTF-8');
+    res.set('Cache-Control', 'max-age=86400');
             
     if (JSON.stringify(req.body) == '{}')
     {
@@ -143,13 +150,13 @@ router.post('/', function(req, res, next) {
             
             if (isArray(requestJson['prd:PricingInformation']['prc:Price'])) {
                 for (i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
-                    makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
+                    makeIntoArrayUsingValueOnly(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
                 }
             } else {
-                makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
+                makeIntoArrayUsingValueOnly(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
             }
             makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
-
+                              
             if (isArray(requestJson['prd:AssociatedMedia']['prc:Content'])) {
                 for (i = 0; i < requestJson['prd:AssociatedMedia']['prc:Content'].length; i++) {
                     makeIntoArray(requestJson['prd:AssociatedMedia']['prc:Content'], i, 'prd:SubContent');
@@ -171,6 +178,7 @@ router.post('/', function(req, res, next) {
                 makeIntoArray(requestJson, 'prm:RelatedPromotions', 'prm:Promotion');
             }
                               
+                              
             var localProd = new Product(requestJson);
             
             Product.findByProductId([result['prd:ProductList']['prd:Product']['@']['id']], function (err, products) {
@@ -178,6 +186,7 @@ router.post('/', function(req, res, next) {
                 if (products.length == 0) {
                     localProd.save(function (err, post) {
                         if (err) return next(err);
+                                   
                         res.set('Content-Type', 'text/xml');
                         res.send(getProductXML(cleanUpProductJson(post)));
                     });
@@ -234,6 +243,32 @@ function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
     }
 }
 
+function makeIntoArrayUsingValueOnly(fullJsonToModify, rootElement, changeElement) {
+    
+    if ((typeof fullJsonToModify == 'undefined') ||
+        (typeof fullJsonToModify[rootElement] == 'undefined') ||
+        (typeof fullJsonToModify[rootElement][changeElement] == 'undefined')){
+        console.log("Exiting here");
+        return
+    }
+
+    var myString = "[";
+    var first = true;
+    for (arrayIterator = 0; arrayIterator < fullJsonToModify[rootElement][changeElement].length; arrayIterator++) {
+        if (first != true) {
+            myString += ",";
+        }
+        first = false;
+        myString += "{ \"#\": " + JSON.stringify(fullJsonToModify[rootElement][changeElement][arrayIterator]) + "}";
+    }
+    myString += "]";
+    
+    var myJsonString = JSON.parse(myString);
+        
+    delete fullJsonToModify [rootElement][changeElement];
+        
+    fullJsonToModify[rootElement][changeElement] = myJsonString;
+}
 
 function getProductXML(productJson) {
     
