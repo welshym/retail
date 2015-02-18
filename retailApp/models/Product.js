@@ -38,9 +38,6 @@ var ProductSchema = new mongoose.Schema(
         "prd:PricingInformation" : { "prc:Price" : [{
                                                         "@": {"priceType": String},
                                                         "prc:Commentary" : [{
-                                                                                "@" : {
-                                                                                        "commentaryType" : String,
-                                                                                  },
                                                                                 "#" : String,
                                                                             }],
                                                         "prc:Amount" : {        "@": {
@@ -50,7 +47,6 @@ var ProductSchema = new mongoose.Schema(
                                                                                 "#" : String,
                                                                         }
                                                     }]},
-                                        
                                         
         "prd:Rating" : {
                             "prd:AverageRating" : String,
