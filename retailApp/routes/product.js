@@ -1,8 +1,9 @@
 var express = require('express');
-var router = express.Router();
-
 var mongoose = require('mongoose');
 var Product = require('../models/Product.js');
+var jsonUtils = require('../local_modules/jsonutility.js');
+var router = express.Router();
+
 
 var xml2js = require('xml2js');
 var options = {
@@ -131,53 +132,52 @@ router.post('/', function(req, res, next) {
             
     if (JSON.stringify(req.body) == '{}')
     {
-        var inspect = require('eyes').inspector({maxLength: false})
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['prd:ProductList']['prd:Product']));
-            updateJSONElementString(requestJson, "prd:DescriptionList", "type", "descriptionType");
-            updateJSONElementString(requestJson, "prd:PurchasingOptions", "type", "optionType");
-            updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "contentType");
-            updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "subContentType");
-            updateJSONElementString(requestJson, "prd:RelatedProducts", "type", "relatedType");
-            updateJSONElementString(requestJson, "prd:PricingInformation", "type", "priceType");
-            updateJSONElementString(requestJson, "prd:PricingInformation", "type", "commentaryType");
-                              
             requestJson['prd:ProductId'] = result['prd:ProductList']['prd:Product']['@']['id'];
-                              
-            makeIntoArray(requestJson, 'prd:DescriptionList', 'prd:Description');
-            makeIntoArray(requestJson, 'prd:PurchasingOptions', 'prd:Option');
-            makeIntoArray(requestJson, 'prd:RelatedProducts', 'prd:Product');
             
-            if (isArray(requestJson['prd:PricingInformation']['prc:Price'])) {
-                for (i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
-                    makeIntoArrayUsingValueOnly(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
-                }
-            } else {
-                makeIntoArrayUsingValueOnly(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
-            }
-            makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
+            jsonUtils.updateJSONElementString(requestJson, "prd:DescriptionList", "type", "descriptionType");
+            jsonUtils.updateJSONElementString(requestJson, "prd:PurchasingOptions", "type", "optionType");
+            jsonUtils.updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "contentType");
+            jsonUtils.updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "subContentType");
+            jsonUtils.updateJSONElementString(requestJson, "prd:RelatedProducts", "type", "relatedType");
                               
-            if (isArray(requestJson['prd:AssociatedMedia']['prc:Content'])) {
-                for (i = 0; i < requestJson['prd:AssociatedMedia']['prc:Content'].length; i++) {
-                    makeIntoArray(requestJson['prd:AssociatedMedia']['prc:Content'], i, 'prd:SubContent');
+            jsonUtils.makeIntoArray(requestJson, 'prd:DescriptionList', 'prd:Description');
+            jsonUtils.makeIntoArray(requestJson, 'prd:PurchasingOptions', 'prd:Option');
+            jsonUtils.makeIntoArray(requestJson, 'prd:RelatedProducts', 'prd:Product');
+            
+            if (jsonUtils.isArray(requestJson['prd:PricingInformation']['prc:Price'])) {
+                for (i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
+                    jsonUtils.updateJSONElementString(requestJson['prd:PricingInformation']['prc:Price'][i], "prc:Commentary", "type", "commentaryType");
+                    jsonUtils.makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
                 }
             } else {
-                makeIntoArray(requestJson['prd:AssociatedMedia'], 'prc:Content', 'prd:SubContent');
+                jsonUtils.updateJSONElementString(requestJson['prd:PricingInformation']['prc:Price'], "prc:Commentary", "type", "commentaryType");
+                jsonUtils.makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
             }
-            makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
+            jsonUtils.makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
+            jsonUtils.updateJSONElementString(requestJson, "prd:PricingInformation", "type", "priceType");
+                              
+            if (jsonUtils.isArray(requestJson['prd:AssociatedMedia']['prc:Content'])) {
+                for (i = 0; i < requestJson['prd:AssociatedMedia']['prc:Content'].length; i++) {
+                    jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia']['prc:Content'], i, 'prd:SubContent');
+                }
+            } else {
+                jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia'], 'prc:Content', 'prd:SubContent');
+            }
+            jsonUtils.makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
 
             // Do we have any promotions?
             if (typeof requestJson['prm:RelatedPromotions'] != 'undefined') {
-                if (isArray(requestJson['prm:RelatedPromotions']['prm:Promotion'])) {
+                if (jsonUtils.isArray(requestJson['prm:RelatedPromotions']['prm:Promotion'])) {
                     for (i = 0; i < requestJson['prm:RelatedPromotions']['prm:Promotion'].length; i++) {
-                        makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], i, 'prm:DescriptionList');
+                        jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], i, 'prm:DescriptionList');
                     }
                 } else {
-                    makeIntoArray(requestJson['prm:RelatedPromotions'], 'prm:Promotion', 'prm:DescriptionList');
+                    jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions'], 'prm:Promotion', 'prm:DescriptionList');
                 }
-                makeIntoArray(requestJson, 'prm:RelatedPromotions', 'prm:Promotion');
+                jsonUtils.makeIntoArray(requestJson, 'prm:RelatedPromotions', 'prm:Promotion');
             }
-                              
                               
             var localProd = new Product(requestJson);
             
@@ -201,74 +201,6 @@ router.post('/', function(req, res, next) {
 });
 
 
-function replaceText(findText, replacementText, sourceString) {
-    var re = new RegExp(findText,"g");
-    
-    return sourceString.replace(re, replacementText);
-}
-
-function updateJSONElementString(fullJson, jsonElementToUpdate, findText, replacementText) {
-    
-    if (typeof fullJson[jsonElementToUpdate] == 'undefined') {
-        return
-    }
-    
-    var stringJson = JSON.stringify(fullJson[jsonElementToUpdate]);
-    
-    stringJson = replaceText(findText, replacementText, stringJson);
-    delete fullJson[jsonElementToUpdate];
-    fullJson[jsonElementToUpdate] = JSON.parse(stringJson);
-}
-
-function isArray(what) {
-    return Object.prototype.toString.call(what) === '[object Array]';
-}
-
-function makeIntoArray(fullJsonToModify, rootElement, changeElement) {
-    
-    if ((typeof fullJsonToModify == 'undefined') ||
-        (typeof fullJsonToModify[rootElement] == 'undefined') ||
-        (typeof fullJsonToModify[rootElement][changeElement] == 'undefined')){
-        return
-    }
-    
-    if (!isArray(fullJsonToModify[rootElement][changeElement])) {
-        
-        var myString = "[" + JSON.stringify(fullJsonToModify[rootElement][changeElement]) + "]";
-        var myJsonString = JSON.parse(myString);
-                
-        delete fullJsonToModify [rootElement][changeElement];
-        
-        fullJsonToModify[rootElement][changeElement] = myJsonString;
-    }
-}
-
-function makeIntoArrayUsingValueOnly(fullJsonToModify, rootElement, changeElement) {
-    
-    if ((typeof fullJsonToModify == 'undefined') ||
-        (typeof fullJsonToModify[rootElement] == 'undefined') ||
-        (typeof fullJsonToModify[rootElement][changeElement] == 'undefined')){
-        console.log("Exiting here");
-        return
-    }
-
-    var myString = "[";
-    var first = true;
-    for (arrayIterator = 0; arrayIterator < fullJsonToModify[rootElement][changeElement].length; arrayIterator++) {
-        if (first != true) {
-            myString += ",";
-        }
-        first = false;
-        myString += "{ \"#\": " + JSON.stringify(fullJsonToModify[rootElement][changeElement][arrayIterator]) + "}";
-    }
-    myString += "]";
-    
-    var myJsonString = JSON.parse(myString);
-        
-    delete fullJsonToModify [rootElement][changeElement];
-        
-    fullJsonToModify[rootElement][changeElement] = myJsonString;
-}
 
 function getProductXML(productJson) {
     
@@ -314,51 +246,37 @@ function productJsonUpdate(productJson) {
         productJson['prd:FalconEligible'] = 'false';
     }
 
-    removeId(productJson, 'prd:DescriptionList', 'prd:Description');
-    updateJSONElementString(productJson, "prd:DescriptionList", "descriptionType", "type");
+    jsonUtils.removeId(productJson, 'prd:DescriptionList', 'prd:Description');
+    jsonUtils.updateJSONElementString(productJson, "prd:DescriptionList", "descriptionType", "type");
     
-    removeId(productJson, 'prd:PurchasingOptions', 'prd:Option');
-    updateJSONElementString(productJson, "prd:PurchasingOptions", "optionType", "type");
+    jsonUtils.removeId(productJson, 'prd:PurchasingOptions', 'prd:Option');
+    jsonUtils.updateJSONElementString(productJson, "prd:PurchasingOptions", "optionType", "type");
     
-    removeId(productJson, 'prd:PricingInformation', 'prc:Price');
-    updateJSONElementString(productJson, "prd:PricingInformation", "priceType", "type");
+    jsonUtils.removeId(productJson, 'prd:PricingInformation', 'prc:Price');
+    jsonUtils.updateJSONElementString(productJson, "prd:PricingInformation", "priceType", "type");
 
     for (j = 0; j < productJson['prd:PricingInformation']['prc:Price'].length; j++) {
-        removeId(productJson['prd:PricingInformation']['prc:Price'], j, 'prc:Commentary');
+        jsonUtils.removeId(productJson['prd:PricingInformation']['prc:Price'], j, 'prc:Commentary');
     }
-    updateJSONElementString(productJson, "prd:PricingInformation", "commentaryType", "type");
+    jsonUtils.updateJSONElementString(productJson, "prd:PricingInformation", "commentaryType", "type");
     
-    removeId(productJson, 'prd:AssociatedMedia', 'prd:Content');
-    updateJSONElementString(productJson, "prd:AssociatedMedia", "contentType", "type");
+    jsonUtils.removeId(productJson, 'prd:AssociatedMedia', 'prd:Content');
+    jsonUtils.updateJSONElementString(productJson, "prd:AssociatedMedia", "contentType", "type");
     
     for (j = 0; j < productJson['prd:AssociatedMedia']['prd:Content'].length; j++) {
-        removeId(productJson['prd:AssociatedMedia']['prd:Content'], j, 'prd:SubContent');
+        jsonUtils.removeId(productJson['prd:AssociatedMedia']['prd:Content'], j, 'prd:SubContent');
     }
-    updateJSONElementString(productJson, "prd:AssociatedMedia", "subContentType", "type");
+    jsonUtils.updateJSONElementString(productJson, "prd:AssociatedMedia", "subContentType", "type");
 
-    removeId(productJson, 'prd:RelatedProducts', 'prd:Product');
-    updateJSONElementString(productJson, "prd:RelatedProducts", "relatedType", "type");
+    jsonUtils.removeId(productJson, 'prd:RelatedProducts', 'prd:Product');
+    jsonUtils.updateJSONElementString(productJson, "prd:RelatedProducts", "relatedType", "type");
 
-    removeId(productJson, 'prm:RelatedPromotions', 'prm:Promotion');
-    if (isArray(productJson['prm:RelatedPromotions']['prm:Promotion'])) {
+    jsonUtils.removeId(productJson, 'prm:RelatedPromotions', 'prm:Promotion');
+    if (jsonUtils.isArray(productJson['prm:RelatedPromotions']['prm:Promotion'])) {
         for (j = 0; j < productJson['prm:RelatedPromotions']['prm:Promotion'].length; j++) {
-            removeId(productJson['prm:RelatedPromotions']['prm:Promotion'], j, 'prm:DescriptionList');
+            jsonUtils.removeId(productJson['prm:RelatedPromotions']['prm:Promotion'], j, 'prm:DescriptionList');
         }
     }
-}
-
-function removeId(jsonElement, rootElement, contentElement) {
-    if (typeof jsonElement[rootElement][contentElement] != 'undefined') {
-        if (isArray(jsonElement[rootElement][contentElement])) {
-            for (removeCount = 0; removeCount < jsonElement[rootElement][contentElement].length; removeCount++) {
-                delete jsonElement[rootElement][contentElement][removeCount]["_id"];
-            }
-        } else {
-            delete jsonElement[rootElement][contentElement]["_id"];
-        }
-    }
-    
-    return jsonElement;
 }
 
 
@@ -421,25 +339,3 @@ function shortenProductResponse(fullProductJson) {
 }
 
 module.exports = router;
-
-
-/*
- test data
- 
- var testProductJson = {"@":   {
- "id":"123456",
- "uri":"testuri",
- "brand":"argos",
- "version":"2"
- },
- "prd:Brand":    "TestName3",
- "prd:DescriptionList":
- 
- {"prd:Description": [
- {  "@" : { "descriptionType" : "123456"}, "#" : "Test Description"},
- {  "@" : { "descriptionType" : "1234567"}, "#" : "Test Description 2"}
- ]
- }
- };
-
-*/
