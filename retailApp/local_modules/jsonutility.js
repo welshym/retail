@@ -50,7 +50,7 @@ var makeIntoArrayUsingValueOnly = function (fullJsonToModify, rootElement, chang
 
     var myString = "[";
     var first = true;
-    for (arrayIterator = 0; arrayIterator < fullJsonToModify[rootElement][changeElement].length; arrayIterator++) {
+    for (var arrayIterator = 0; arrayIterator < fullJsonToModify[rootElement][changeElement].length; arrayIterator++) {
         if (first != true) {
             myString += ",";
         }
@@ -69,7 +69,7 @@ var makeIntoArrayUsingValueOnly = function (fullJsonToModify, rootElement, chang
 var removeId = function (jsonElement, rootElement, contentElement) {
     if (typeof jsonElement[rootElement][contentElement] != 'undefined') {
         if (isArray(jsonElement[rootElement][contentElement])) {
-            for (removeCount = 0; removeCount < jsonElement[rootElement][contentElement].length; removeCount++) {
+            for (var removeCount = 0; removeCount < jsonElement[rootElement][contentElement].length; removeCount++) {
                 delete jsonElement[rootElement][contentElement][removeCount]["_id"];
             }
         } else {
@@ -80,11 +80,39 @@ var removeId = function (jsonElement, rootElement, contentElement) {
     return jsonElement;
 }
 
+var createErrorMessage = function (messageString, errorCode) {
+    
+    var errorString = "<rsp:Error xmlns:rsp=\"http://schemas.homeretailgroup.com/response\" xsi:schemaLocation=\"http://schemas.homeretailgroup.com/response group-response-v1.xsd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n";
+    
+    errorString += "<rsp:Code>" + errorCode + "</rsp:Code>";
+    errorString += "<rsp:Message>" + messageString + "</rsp:Message>";
+    errorString += "</rsp:Error>";
+    
+    return errorString;
+}
+
+var pageResults = function (results, pageSize, pageNumber) {
+    var pagedResults = [];
+    
+    if (results.length > ((pageNumber - 1) * pageSize)) {
+        var pageLimit = results.length < (pageNumber * pageSize) ? results.length: (pageNumber * pageSize);
+        
+        for (var pageElement = (pageNumber - 1) * pageSize; pageElement < pageLimit; pageElement++) {
+            pagedResults.push(results[pageElement]);
+        }
+    }
+    
+    return pagedResults;
+}
+
+
 module.exports = {
     replaceText: replaceText,
     updateJSONElementString: updateJSONElementString,
     isArray: isArray,
     makeIntoArray: makeIntoArray,
     makeIntoArrayUsingValueOnly: makeIntoArrayUsingValueOnly,
-    removeId: removeId
+    removeId: removeId,
+    pageResults: pageResults,
+    createErrorMessage: createErrorMessage
 }
