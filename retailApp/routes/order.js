@@ -120,6 +120,8 @@ router.post('/', function(req, res, next) {
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['ord:Order']));
             
+                              console.log(JSON.stringify(result['ord:Order']));
+                              
             jsonUtils.updateJSONElementString(requestJson, "ord:Fulfilment", "type", "fulfilmentType");
             jsonUtils.updateJSONElementString(requestJson["cst:Customer"]["cst:ContactDetails"], "cmn:Telephone", "type", "telephoneType");
             jsonUtils.updateJSONElementString(requestJson["cst:Customer"]["cst:ContactDetails"], "cmn:Email", "type", "emailType");
