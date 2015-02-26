@@ -105,6 +105,25 @@ var pageResults = function (results, pageSize, pageNumber) {
     return pagedResults;
 }
 
+var convertIDToUri = function (requestJsonElement, uriPathElement, req) {
+    var elementId = '';
+    if (typeof requestJsonElement['@'] != 'undefined') {
+        if (typeof requestJsonElement['@']['uri'] != 'undefined') {
+            var uri = requestJsonElement['@']['uri'];
+            elementId = uri.match(/(\d*$)/m)[0];
+        } else if (typeof requestJsonElement['@']['id'] != 'undefined') {
+            elementId = requestJsonElement['@']['id'];
+            origEnvironment = req.get('X-original-environment');
+            if (origEnvironment == undefined) {
+                origEnvironment = "http://api.homeretailgroup.com";
+            }
+            requestJsonElement['@']['uri'] = origEnvironment + uriPathElement + "/" + elementId;
+        }
+    }
+    
+    return elementId;
+}
+
 
 module.exports = {
     replaceText: replaceText,
@@ -114,5 +133,6 @@ module.exports = {
     makeIntoArrayUsingValueOnly: makeIntoArrayUsingValueOnly,
     removeId: removeId,
     pageResults: pageResults,
+    convertIDToUri: convertIDToUri,
     createErrorMessage: createErrorMessage
 }
