@@ -28,7 +28,7 @@ router.get('/', function(req, res, next) {
         if (pageNumber <= 0) {
            var messageStr = "Invalid page number.";
            res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
-           return
+           return;
         }
     }
        
@@ -37,33 +37,18 @@ router.get('/', function(req, res, next) {
         if (pageSize <= 0) {
            var messageStr = "Invalid page size.";
            res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
-           return
+           return;
         }
     }
     
-    // Need to create a key value pair of the search filters here then use a generic find by
-    // using the mongo search query
-           
-    // http://docs.mongodb.org/manual/reference/operator/query/and/
-           
-    if (typeof req.query['emailAddress'] != 'undefined') {
-        var emailAddress = [];
-        emailAddress = emailAddress.concat(req.query['emailAddress']);
-        if (typeof req.query['telephone'] != 'undefined') {
-           var telephone = [];
-           telephone = telephone.concat(req.query['telephone']);
-           Order.findByEmailAddressAndTelephoneNumber(emailAddress, telephone, function (err, orders) {
-                if (err) return next(err);
-                createOrderGetResponse(req, res, pageSize, pageNumber, orders);
-            });
-        } else {
-           Order.findByEmailAddress(emailAddress, function (err, orders) {
-                if (err) return next(err);
-                createOrderGetResponse(req, res, pageSize, pageNumber, orders);
-            });
-        }
-    }
-    else {
+    var queryArray = createGetQueryArray(req);
+
+    if (queryArray.length > 0) {
+        Order.findByGenericQuery(queryArray, function (err, orders) {
+            if (err) return next(err);
+            createOrderGetResponse(req, res, pageSize, pageNumber, orders);
+        });
+    } else {
         Order.find(function (err, orders) {
             if (err) return next(err);
                         
@@ -135,25 +120,13 @@ router.post('/', function(req, res, next) {
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['ord:Order']));
             
-            var uri = requestJson['@']['uri'];
-            orderId = uri.match(/(\d*$)/m);
-            if (orderId[0] == '') {
-                var messageStr = "Order URI not correctly defined";
-                res.status(400).send(jsonUtils.createErrorMessage (messageStr, "400"));
-            }
-                              
-            if (typeof requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'] != 'undefined') {
-                requestJson['cmn:Telephone'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'];
-            }
-            
-            requestJson['ord:OrderId'] = orderId[0];
             jsonUtils.updateJSONElementString(requestJson, "ord:Fulfilment", "type", "fulfilmentType");
             jsonUtils.updateJSONElementString(requestJson["cst:Customer"]["cst:ContactDetails"], "cmn:Telephone", "type", "telephoneType");
             jsonUtils.updateJSONElementString(requestJson["cst:Customer"]["cst:ContactDetails"], "cmn:Email", "type", "emailType");
             jsonUtils.updateJSONElementString(requestJson["bsk:Basket"], "bsk:ItemList", "type", "itemType");
             jsonUtils.updateJSONElementString(requestJson, "bsk:Basket", "type", "quantityType");
             jsonUtils.makeIntoArray(requestJson['bsk:Basket'], 'bsk:ItemList', 'cmn:Item');
-
+            
             requestJson['ord:EmailAddress'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Email']['#'];
             if (typeof requestJson['ord:LifeCycleDate'] == 'undefined') {
                 var currentDate = new Date(Date.now());
@@ -162,7 +135,28 @@ router.post('/', function(req, res, next) {
             } else {
                 jsonUtils.updateJSONElementString(requestJson, "ord:LifeCycleDate", "type", "lifeCycleDateType");
             }
-                    
+                              
+            for (var i = 0; i < requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'].length; i++) {
+                jsonUtils.convertIDToUri(requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i], "/product/argos", req);
+            }
+
+            if (requestJson['ord:Fulfilment']['@']['fulfilmentType'] == "Collection") {
+                jsonUtils.convertIDToUri(requestJson['ord:Fulfilment']['loc:Store'], "/location/argos/store", req);
+            }
+            var orderId = jsonUtils.convertIDToUri(requestJson, "/order/argos", req);
+                              
+            if (orderId == '') {
+                var messageStr = "Order URI not correctly defined";
+                res.status(400).send(jsonUtils.createErrorMessage (messageStr, "400"));
+                return;
+            }
+            requestJson['ord:OrderId'] = orderId;
+                              
+            if (typeof requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'] != 'undefined') {
+                requestJson['cmn:Telephone'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'];
+            }
+                              
+            updateOrderStatus(requestJson);
                               
             var localOrder = new Order(requestJson);
             var orderIds = [requestJson['ord:OrderId']];
@@ -209,7 +203,7 @@ function getOrderXML(orderJson, totalResults, resultsPerPage, pageCount, positio
         sourceOrderXMLString = jsonUtils.replaceText("<ord:OrderList>", "<ord:OrderList " + pageData, sourceOrderXMLString.toString());
     }
     
-    return sourceOrderXMLString
+    return sourceOrderXMLString;
 }
 
 
@@ -271,6 +265,99 @@ function createOrderGetResponse (request, response, pageSize, pageNumber, orders
         var messageStr = "<ord:OrderList xmlns:ord=\"http://schemas.homeretailgroup.com/order\" xmlns:bsk=\"http://schemas.homeretailgroup.com/basket\" xmlns:cmn=\"http://schemas.homeretailgroup.com/common\" xmlns:cst=\"http://schemas.homeretailgroup.com/customer\" xmlns:loc=\"http://schemas.homeretailgroup.com/location\">\n</ord:OrderList>";
         response.status(200).send(messageStr);
     }
+}
+
+function updateOrderStatus (orderJson) {
+    var currentDate = new Date(Date.now());
+    var expiryDate;
+    var orderStatusOpen = "Open";
+    var orderStatusClosed = "Closed";
+    var changed = false;
+    
+    if (typeof orderJson['ord:OrderStatus'] == 'undefined') {
+        originalStatus = undefined;
+    } else {
+        originalStatus = orderJson['ord:OrderStatus'];
+    }
+    
+    if (orderJson['ord:Fulfilment']['@']['fulfilmentType'] == "Collection") {
+        expiryDate = Date.parse(orderJson['ord:Fulfilment']['cmn:LatestCollectionDate']);
+    } else {
+        expiryDate = Date.parse(orderJson['ord:Fulfilment']['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']);
+        orderStatusClosed = "Delivered";
+    }
+    
+    if (currentDate > expiryDate) {
+        orderJson['ord:OrderStatus'] = orderStatusClosed;
+    } else {
+        orderJson['ord:OrderStatus'] = orderStatusOpen;
+    }
+    
+    if (orderJson['ord:OrderStatus'] != originalStatus) {
+        changed = true;
+    }
+    
+    return changed;
+}
+
+function createGetQueryArray (req) {
+    
+    var queryArray = [];
+    
+    if (typeof req.query['emailAddress'] != 'undefined') {
+        var emailAddressList = [];
+        emailAddressList = emailAddressList.concat(req.query['emailAddress']);
+        
+        emailQuery = { "ord:EmailAddress" : { $in : emailAddressList} };
+        queryArray.push(emailQuery);
+    }
+    
+    if (typeof req.query['telephone'] != 'undefined') {
+        var telephoneList = [];
+        telephoneList = telephoneList.concat(req.query['telephone']);
+        telephoneQuery = { "cmn:Telephone" : { $in : telephoneList} };
+        queryArray.push(telephoneQuery);
+    }
+    
+    if (typeof req.query['storeId'] != 'undefined') {
+        var storeId = [];
+        storeId = storeId.concat(req.query['storeId']);
+        storeIdQuery = { "ord:Fulfilment.loc:Store.@.uri" : new RegExp(storeId, "g")  };
+        queryArray.push(storeIdQuery);
+    }
+    
+    if (typeof req.query['status'] != 'undefined') {
+        var orderStatus = [];
+        orderStatus = orderStatus.concat(req.query['status']);
+        orderStatusQuery = { "ord:OrderStatus" : { $in : orderStatus} };
+        queryArray.push(orderStatusQuery);
+    }
+    
+    if (typeof req.query['startDate'] != 'undefined') {
+        var startDate = [];
+        startDate = startDate.concat(req.query['startDate']);
+        
+        startDateQuery = { "ord:LifeCycleDate.#" : { $gte : new Date(startDate)} };
+        queryArray.push(startDateQuery);
+    }
+    
+    if (typeof req.query['endDate'] != 'undefined') {
+        var endDate = [];
+        endDate = endDate.concat(req.query['endDate']);
+        
+        // This increments the date by one day and ends up with a different format, but its still recognised by the parser
+        endDateQuery = { "ord:LifeCycleDate.#" : { $lte : new Date(endDate)+1} };
+        queryArray.push(endDateQuery);
+    }
+    
+    if (typeof req.query['collectionId'] != 'undefined') {
+        var collectionIdList = [];
+        collectionIdList = collectionIdList.concat(req.query['collectionId']);
+        collectionIdQuery = { "bsk:Basket.bsk:ItemList.cmn:Item.@.collectionId" : { $in : collectionIdList} };
+        queryArray.push(collectionIdQuery);
+    }
+
+    return queryArray;
 }
 
 module.exports = router;
