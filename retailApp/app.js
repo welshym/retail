@@ -8,6 +8,7 @@ var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
 var product = require('./routes/product');
+var order = require('./routes/order');
 
 var mongoose = require('mongoose');
 
@@ -16,7 +17,6 @@ var db;
 var config = {
     "USER"    : "",
     "PASS"    : "",
-//    "HOST"    : "ec2-54-186-25-151.us-west-2.compute.amazonaws.com",
     "HOST"    : "localhost/retailApp",
     "PORT"    : "27017",
     "DATABASE" : "retailApp"
@@ -70,6 +70,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 app.use('/product', product);
+app.use('/order', order);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -106,30 +107,3 @@ app.use(function(err, req, res, next) {
 console.log('starting Express (NodeJS) Web server');
 app.listen(8080);
 console.log('Webserverlistening on port 8080');
-
-
-
-// Take the longhtml remove it then convert it to XML using CDATA and insert it back in
-
-
-//var testXML = "<prd:DescriptionList>\n\t<prd:Description>Test1</prd:Description>\n</prd:DescriptionList>\n<prd:DescriptionList>\n\t<prd:Description>Test2</prd:Description>\n</prd:DescriptionList>\n\t<prd:DescriptionList>\n\t<prd:Description>Test3</prd:Description>\n</prd:DescriptionList>"
-
-//var re = new RegExp("</prd:DescriptionList>");
-//replacementText = "\t<prd:Description>Test1AddOn</prd:Description>" + "\n</prd:DescriptionList>";
-
-/*
-console.log("testXML BEFORE");
-console.log(testXML);
-
-testXML = testXML.replace(re, replacementText);
-console.log("\n\n\ntestXML AFTER");
-console.log(testXML);
-
-testXML = testXML.replace(re, replacementText);
-console.log("\n\n\ntestXML AFTER");
-console.log(testXML);
-
-testXML = testXML.replace(re, replacementText);
-console.log("\n\n\ntestXML AFTER");
-console.log(testXML);
-*/
