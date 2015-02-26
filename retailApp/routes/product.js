@@ -32,7 +32,7 @@ router.get('/', function(req, res, next) {
                             res.send(getProductXML(cleanedUpJson));
                         } else {
                             var messageStr = "Product " + searchIds + " not found";
-                            res.status(404).send(createErrorMessage (messageStr, "404"));
+                            res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
                         }
                 });
 
@@ -43,11 +43,12 @@ router.get('/', function(req, res, next) {
                         
                         if (products.length != 0) {
                              var cleanedUpJson = cleanUpProductJson(products);
+                             console.log(JSON.stringify(products));
                              shortenProductResponse(cleanedUpJson);
                              res.send(getProductXML(cleanedUpJson));
                         } else {
                              var messageStr = "Products not found";
-                             res.status(404).send(createErrorMessage (messageStr, "404"));
+                             res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
                         }
                 });
            
@@ -77,7 +78,7 @@ router.get('/:id', function(req, res, next) {
             res.send(getProductXML(cleanedUpJson));
         } else {
             var messageStr = "Product " + searchIds + " not found";
-            res.status(404).send(createErrorMessage (messageStr, "404"));
+            res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
         }
     });
 });
@@ -101,7 +102,7 @@ router.delete('/:id', function(req, res, next) {
               
     if (req.params.id == "") {
         var messageStr = "Product " + req.params.id + " not defined";
-        res.status(400).send(createErrorMessage (messageStr, "400"));
+        res.status(400).send(jsonUtils.createErrorMessage(messageStr, "400"));
     }
 
     Product.findAndRemoveByProductId(req.params.id, function (err, products) {
@@ -111,7 +112,7 @@ router.delete('/:id', function(req, res, next) {
             res.status(204).end();
         } else {
             var messageStr = "Product " + req.params.id + " not found";
-            res.status(404).send(createErrorMessage (messageStr, "404"));
+            res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
         }
     });
 });
@@ -121,7 +122,7 @@ router.delete('/', function(req, res, next) {
     res.set('Cache-Control', 'no-cache');
               
     var messageStr = "Product not defined";
-    res.status(400).send(createErrorMessage (messageStr, "400"));
+    res.status(400).send(jsonUtils.createErrorMessage (messageStr, "400"));
 });
 
 
@@ -147,7 +148,7 @@ router.post('/', function(req, res, next) {
             jsonUtils.makeIntoArray(requestJson, 'prd:RelatedProducts', 'prd:Product');
             
             if (jsonUtils.isArray(requestJson['prd:PricingInformation']['prc:Price'])) {
-                for (i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
+                for (var i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
                     jsonUtils.updateJSONElementString(requestJson['prd:PricingInformation']['prc:Price'][i], "prc:Commentary", "type", "commentaryType");
                     jsonUtils.makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
                 }
@@ -159,7 +160,7 @@ router.post('/', function(req, res, next) {
             jsonUtils.updateJSONElementString(requestJson, "prd:PricingInformation", "type", "priceType");
                               
             if (jsonUtils.isArray(requestJson['prd:AssociatedMedia']['prc:Content'])) {
-                for (i = 0; i < requestJson['prd:AssociatedMedia']['prc:Content'].length; i++) {
+                for (var i = 0; i < requestJson['prd:AssociatedMedia']['prc:Content'].length; i++) {
                     jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia']['prc:Content'], i, 'prd:SubContent');
                 }
             } else {
@@ -170,7 +171,7 @@ router.post('/', function(req, res, next) {
             // Do we have any promotions?
             if (typeof requestJson['prm:RelatedPromotions'] != 'undefined') {
                 if (jsonUtils.isArray(requestJson['prm:RelatedPromotions']['prm:Promotion'])) {
-                    for (i = 0; i < requestJson['prm:RelatedPromotions']['prm:Promotion'].length; i++) {
+                    for (var i = 0; i < requestJson['prm:RelatedPromotions']['prm:Promotion'].length; i++) {
                         jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], i, 'prm:DescriptionList');
                     }
                 } else {
@@ -192,11 +193,14 @@ router.post('/', function(req, res, next) {
                     });
                 } else {
                     var messageStr = "Product " + requestJson['prd:ProductId'] + " already exists";
-                    res.status(404).send(createErrorMessage (messageStr, "404"));
+                    res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
                 }
             });
                               
         });
+    } else {
+        var messageStr = "XML Payload only";
+        res.status(400).send(jsonUtils.createErrorMessage (messageStr, "400"));
     }
 });
 
@@ -210,9 +214,9 @@ function getProductXML(productJson) {
                     declaration: { include : false }
     };
     
-    for (i = 0; i < productJson['prd:Product'].length; i++) {
+    for (var i = 0; i < productJson['prd:Product'].length; i++) {
         
-        for (j = 0; j < productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'].length; j++) {
+        for (var j = 0; j < productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'].length; j++) {
             if (productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['@']['type'] == "longHtml") {
                 productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'] = productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]['#'].trim();
                 sourceLongHTMLJS.push(productJson['prd:Product'][i]['prd:DescriptionList']['prd:Description'][j]);
@@ -224,7 +228,7 @@ function getProductXML(productJson) {
     }
   
     var sourceProductXMLString = js2xmlparser("prd:ProductList", JSON.stringify(productJson));
-    for (i = 0; i < sourceLongHTMLJS.length; i++) {
+    for (var i = 0; i < sourceLongHTMLJS.length; i++) {
         replacementText = js2xmlparser("prd:Description", JSON.stringify(sourceLongHTMLJS[i]), options);
         
         var typeString = "longHtml" + i;
@@ -255,7 +259,7 @@ function productJsonUpdate(productJson) {
     jsonUtils.removeId(productJson, 'prd:PricingInformation', 'prc:Price');
     jsonUtils.updateJSONElementString(productJson, "prd:PricingInformation", "priceType", "type");
 
-    for (j = 0; j < productJson['prd:PricingInformation']['prc:Price'].length; j++) {
+    for (var j = 0; j < productJson['prd:PricingInformation']['prc:Price'].length; j++) {
         jsonUtils.removeId(productJson['prd:PricingInformation']['prc:Price'], j, 'prc:Commentary');
     }
     jsonUtils.updateJSONElementString(productJson, "prd:PricingInformation", "commentaryType", "type");
@@ -263,7 +267,7 @@ function productJsonUpdate(productJson) {
     jsonUtils.removeId(productJson, 'prd:AssociatedMedia', 'prd:Content');
     jsonUtils.updateJSONElementString(productJson, "prd:AssociatedMedia", "contentType", "type");
     
-    for (j = 0; j < productJson['prd:AssociatedMedia']['prd:Content'].length; j++) {
+    for (var j = 0; j < productJson['prd:AssociatedMedia']['prd:Content'].length; j++) {
         jsonUtils.removeId(productJson['prd:AssociatedMedia']['prd:Content'], j, 'prd:SubContent');
     }
     jsonUtils.updateJSONElementString(productJson, "prd:AssociatedMedia", "subContentType", "type");
@@ -273,7 +277,7 @@ function productJsonUpdate(productJson) {
 
     jsonUtils.removeId(productJson, 'prm:RelatedPromotions', 'prm:Promotion');
     if (jsonUtils.isArray(productJson['prm:RelatedPromotions']['prm:Promotion'])) {
-        for (j = 0; j < productJson['prm:RelatedPromotions']['prm:Promotion'].length; j++) {
+        for (var j = 0; j < productJson['prm:RelatedPromotions']['prm:Promotion'].length; j++) {
             jsonUtils.removeId(productJson['prm:RelatedPromotions']['prm:Promotion'], j, 'prm:DescriptionList');
         }
     }
@@ -285,28 +289,17 @@ function cleanUpProductJson(sourceJson) {
     
     if (localProds.length != undefined) {
         var myJsonString = {"prd:Product" : [] };
-        for (i = 0; i < localProds.length; i++) {
+        for (var i = 0; i < localProds.length; i++) {
             productJsonUpdate(localProds[i]);
             myJsonString["prd:Product"].push(localProds[i])
         }
     } else {
         productJsonUpdate(localProds);
-        myJsonString = {"prd:Product" : [localProds]};
+        var myJsonString = {"prd:Product" : [localProds]};
     }
     return myJsonString;
 }
 
-
-function createErrorMessage (messageString, errorCode) {
-    
-    var errorString = "<rsp:Error xmlns:rsp=\"http://schemas.homeretailgroup.com/response\" xsi:schemaLocation=\"http://schemas.homeretailgroup.com/response group-response-v1.xsd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n";
-    
-    errorString += "<rsp:Code>" + errorCode + "</rsp:Code>";
-    errorString += "<rsp:Message>" + messageString + "</rsp:Message>";
-    errorString += "</rsp:Error>";
-    
-    return errorString;
-}
 
 function removeProductArrayElements(productsJson) {
     delete productsJson['prd:RelatedProducts'];
@@ -330,7 +323,7 @@ function shortenProductResponse(fullProductJson) {
     var descriptionLoop;
 
     if (fullProductJson['prd:Product'].length != undefined) {
-        for (shortenLoop = 0; shortenLoop < fullProductJson['prd:Product'].length; shortenLoop++) {
+        for (var shortenLoop = 0; shortenLoop < fullProductJson['prd:Product'].length; shortenLoop++) {
             removeProductArrayElements(fullProductJson['prd:Product'][shortenLoop])
         }
     } else {
