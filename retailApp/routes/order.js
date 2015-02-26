@@ -117,7 +117,8 @@ router.post('/', function(req, res, next) {
             console.log("Within the post body");
     if (JSON.stringify(req.body) == '{}')
     {
-            console.log(req.rawData);
+            console.log("Definitely not JSON");
+            console.log(req);
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['ord:Order']));
             
