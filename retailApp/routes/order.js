@@ -114,22 +114,42 @@ router.delete('/', function(req, res, next) {
 router.post('/', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.order; version=2; format=xml ; charset=UTF-8');
     res.set('Cache-Control', 'no-cache');
-            console.log("Within the post body");
     if (JSON.stringify(req.body) == '{}')
     {
-            console.log("Definitely not JSON");
-            console.log(req.rawData);
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['ord:Order']));
             
-                              console.log(JSON.stringify(result['ord:Order']));
-                              
-            jsonUtils.updateJSONElementString(requestJson, "ord:Fulfilment", "type", "fulfilmentType");
-            jsonUtils.updateJSONElementString(requestJson["cst:Customer"]["cst:ContactDetails"], "cmn:Telephone", "type", "telephoneType");
-            jsonUtils.updateJSONElementString(requestJson["cst:Customer"]["cst:ContactDetails"], "cmn:Email", "type", "emailType");
-            jsonUtils.updateJSONElementString(requestJson["bsk:Basket"], "bsk:ItemList", "type", "itemType");
+            jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Telephone", "type", "telephoneType");
+            jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Email", "type", "emailType");
+            jsonUtils.updateJSONElementString(requestJson['bsk:Basket'], "bsk:ItemList", "type", "itemType");
             jsonUtils.updateJSONElementString(requestJson, "bsk:Basket", "type", "quantityType");
             jsonUtils.makeIntoArray(requestJson['bsk:Basket'], 'bsk:ItemList', 'cmn:Item');
+                              
+            if ((typeof requestJson['ord:FulfilmentList'] == 'undefined') &&
+                (typeof requestJson['ord:Fulfilment'] != 'undefined') &&
+                (requestJson['ord:Fulfilment']['@']['type'] == 'Collection')) {
+                              
+                var collectionIdList = requestJson['ord:Fulfilment']['@']['collectionId'].split(",");
+                var fulfilmentArray = [];
+                for (var i = 0; i < collectionIdList.length; i++) {
+                    var locationFulfilmentItem = {
+                        "@" :   {
+                                    "fulfilmentType" : requestJson['ord:Fulfilment']['@']['type'],
+                                    "collectionId" : collectionIdList[i]
+                                },
+                        "loc:Store" : requestJson['ord:Fulfilment']['loc:Store'],
+                        "cmn:EarliestCollectionDate" : requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:EarliestCollectionDate'],
+                        "cmn:LatestCollectionDate" : requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:LatestCollectionDate']
+                    };
+                    
+                    fulfilmentArray.push(locationFulfilmentItem)
+                }
+                var fulfilmentList = { "ord:Fulfilment" : fulfilmentArray };
+                requestJson['ord:FulfilmentList'] = fulfilmentList;
+            } else {
+                jsonUtils.makeIntoArray(requestJson, 'ord:FulfilmentList', 'ord:Fulfilment');
+                jsonUtils.updateJSONElementString(requestJson['ord:FulfilmentList'], "ord:Fulfilment", "type", "fulfilmentType");
+            }
             
             requestJson['ord:EmailAddress'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Email']['#'];
             if (typeof requestJson['ord:LifeCycleDate'] == 'undefined') {
@@ -219,7 +239,8 @@ function orderJsonUpdate(orderJson) {
     delete orderJson["_id"];
     
     jsonUtils.removeId(orderJson['bsk:Basket'], 'bsk:ItemList', 'cmn:Item');
-    jsonUtils.updateJSONElementString(orderJson, "ord:Fulfilment", "fulfilmentType", "type");
+    jsonUtils.removeId(orderJson, 'ord:FulfilmentList', 'ord:Fulfilment');
+    jsonUtils.updateJSONElementString(orderJson["ord:FulfilmentList"], "ord:Fulfilment", "fulfilmentType", "type");
     jsonUtils.updateJSONElementString(orderJson, "cst:Customer", "emailType", "type");
     jsonUtils.updateJSONElementString(orderJson, "cst:Customer", "telephoneType", "type");
     jsonUtils.updateJSONElementString(orderJson["bsk:Basket"], "bsk:ItemList", "itemType", "type");
@@ -273,7 +294,7 @@ function createOrderGetResponse (request, response, pageSize, pageNumber, orders
 
 function updateOrderStatus (orderJson) {
     var currentDate = new Date(Date.now());
-    var expiryDate;
+    var expiryDate = Date.parse('Jan 1, 1970');
     var orderStatusOpen = "Open";
     var orderStatusClosed = "Closed";
     var changed = false;
@@ -284,11 +305,18 @@ function updateOrderStatus (orderJson) {
         originalStatus = orderJson['ord:OrderStatus'];
     }
     
-    if (orderJson['ord:Fulfilment']['@']['fulfilmentType'] == "Collection") {
-        expiryDate = Date.parse(orderJson['ord:Fulfilment']['cmn:LatestCollectionDate']);
-    } else {
-        expiryDate = Date.parse(orderJson['ord:Fulfilment']['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']);
-        orderStatusClosed = "Delivered";
+    
+    for (var i = 0; i < orderJson['ord:FulfilmentList']['ord:Fulfilment'].length; i++) {
+        if (orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['@']['fulfilmentType'] == "Collection") {
+            if (Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['cmn:LatestCollectionDate']) > expiryDate) {
+                expiryDate = Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['cmn:LatestCollectionDate']);
+            }
+        } else {
+            if (Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']) > expiryDate) {
+                expiryDate = Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']);
+            }
+            orderStatusClosed = "Delivered";
+        }
     }
     
     if (currentDate > expiryDate) {
