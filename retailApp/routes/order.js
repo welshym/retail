@@ -193,6 +193,9 @@ router.post('/', function(req, res, next) {
                               
             updateOrderStatus(requestJson);
                               
+                              
+                              console.log(JSON.stringify(requestJson));
+                              
             var localOrder = new Order(requestJson);
             var orderIds = [requestJson['ord:OrderId']];
             Order.findByOrderId(orderIds, function (err, order) {
