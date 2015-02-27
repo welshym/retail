@@ -19,6 +19,37 @@ var ItemSchema = new mongoose.Schema(
     }
 );
 
+var FulfilmentSchema = new mongoose.Schema(
+    {
+        "@" : {
+                "fulfilmentType" : String,
+                "collectionId" : String
+              },
+        "loc:Store" : { "@" :  {
+                                    "uri" : String,
+                                    "version" : String,
+                                    "brand" : String
+                                }
+                        },
+        "cmn:EarliestCollectionDate" : String,
+        "cmn:LatestCollectionDate" : String,
+        "dlv:Delivery" : {
+                            "dlv:DeliveryDetails" : {
+                                           "dlv:DeliveryAddress" : { "dlv:DeliveryPostCode" : String },
+                                           "dlv:DeliveryGroup" : {
+                                                    "dlv:DeliverySlot" : {
+                                                                            "dlv:DeliveryDate" : String,
+                                                                            "dlv:DeliveryTime" : {
+                                                                                                    "dlv:Start" : String,
+                                                                                                    "dlv:End" : String
+                                                                                                 }
+                                                                         }
+                                                                 }
+                                                    }
+                        }
+    }
+);
+
 var OrderSchema = new mongoose.Schema(
                                       
     {
@@ -51,33 +82,7 @@ var OrderSchema = new mongoose.Schema(
                                                 },
                             "bsk:Value" : { "#" : String, "@" : { "currency" : String}},
                         },
-        "ord:Fulfilment" : {    "@" : {
-                                      "fulfilmentType" : String,
-                                      "collectionId" : String
-                                      },
-                                "loc:Store" : { "@" :  {
-                                                        "uri" : String,
-                                                        "version" : String,
-                                                        "brand" : String
-                                                    }
-                                            },
-                                "cmn:EarliestCollectionDate" : String,
-                                "cmn:LatestCollectionDate" : String,
-                                "dlv:Delivery" : {
-                                      "dlv:DeliveryDetails" : {
-                                            "dlv:DeliveryAddress" : { "dlv:DeliveryPostCode" : String },
-                                            "dlv:DeliveryGroup" : {
-                                                            "dlv:DeliverySlot" : {
-                                                                "dlv:DeliveryDate" : String,
-                                                                "dlv:DeliveryTime" : {
-                                                                    "dlv:Start" : String,
-                                                                    "dlv:End" : String
-                                                                }
-                                                            }
-                                                        }
-                                      }
-                                }
-                        }
+        "ord:FulfilmentList" : { "ord:Fulfilment" : [FulfilmentSchema] }
     });
 
 
