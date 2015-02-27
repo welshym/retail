@@ -132,12 +132,23 @@ router.post('/', function(req, res, next) {
                 var collectionIdList = requestJson['ord:Fulfilment']['@']['collectionId'].split(",");
                 var fulfilmentArray = [];
                 for (var i = 0; i < collectionIdList.length; i++) {
+                              
+                    // Turn the ID into a URI if required
+                    var storeId = jsonUtils.convertIDToUri(requestJson['ord:Fulfilment']['loc:Store'], "/location/argos/store", req);
+                              
+                    console.log(JSON.stringify(requestJson['ord:Fulfilment']['loc:Store']['@']));
+                              
                     var locationFulfilmentItem = {
                         "@" :   {
                                     "fulfilmentType" : requestJson['ord:Fulfilment']['@']['type'],
                                     "collectionId" : collectionIdList[i]
                                 },
-                        "loc:Store" : requestJson['ord:Fulfilment']['loc:Store'],
+                              
+                        "loc:Store" : { "@" :   {
+                                                    "uri" : requestJson['ord:Fulfilment']['loc:Store']['@']['uri'],
+                                                    "brand" : "argos",
+                                                    "version" : "2"
+                                                }},
                         "cmn:EarliestCollectionDate" : requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:EarliestCollectionDate'],
                         "cmn:LatestCollectionDate" : requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:LatestCollectionDate']
                     };
@@ -354,7 +365,7 @@ function createGetQueryArray (req) {
     if (typeof req.query['storeId'] != 'undefined') {
         var storeId = [];
         storeId = storeId.concat(req.query['storeId']);
-        storeIdQuery = { "ord:Fulfilment.loc:Store.@.uri" : new RegExp(storeId, "g")  };
+        storeIdQuery = { "ord:FulfilmentList.ord:Fulfilment.loc:Store.@.uri" : new RegExp(storeId, "g")  };
         queryArray.push(storeIdQuery);
     }
     
