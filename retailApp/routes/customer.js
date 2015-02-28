@@ -38,7 +38,9 @@ router.get('/:id', function(req, res, next) {
     res.set('Cache-Control', 'max-age=86400');
     
     var searchIds = [req.params.id];
-           
+    
+           console.log("searchIds = ", searchIds);
+    
     Customer.findByCustomerId(searchIds, function (err, customers) {
         if (err) return next(err);
         
