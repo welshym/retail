@@ -44,7 +44,7 @@ router.get('/:id', function(req, res, next) {
         
                             
         if (customers.length != 0) {
-            var cleanedUpJson = cleanUpCustomerJson(customers);
+            var cleanedUpJson = cleanUpCustomerJson(customers[0]);
             res.send(getCustomerXML(cleanedUpJson));
         } else {
             var messageStr = "Customer " + searchIds + " not found";
@@ -105,9 +105,6 @@ router.post('/', function(req, res, next) {
                 jsonUtils.updateJSONElementString(requestJson['cst:AddressList']['cst:Address'][i]['cst:ContactDetails'], 'cmn:Telephone', "type", "telephoneType");
                 jsonUtils.makeIntoArray(requestJson['cst:AddressList']['cst:Address'][i], 'cst:ContactDetails', 'cmn:Telephone');
             }
-                              console.log("\n\nrequestJson['cst:AddressList']");
-                              console.log(JSON.stringify(requestJson['cst:AddressList']));
-                              
             var localCustomer = new Customer(requestJson);
             
             Customer.findByCustomerId(result['cst:Customer']['cst:CustomerId'], function (err, customers) {
@@ -117,7 +114,7 @@ router.post('/', function(req, res, next) {
                         if (err) return next(err);
                                    
                         res.set('Content-Type', 'text/xml');
-                        var cleanedUpJson = cleanUpCustomerJson(post);
+                        var cleanedUpJson = cleanUpCustomerJson(post[0]);
                         res.send(getCustomerXML(cleanedUpJson));
                     });
                 } else {
@@ -142,7 +139,11 @@ function getCustomerXML(customerJson) {
         declaration: { include : false }
     };
     
-    var sourceCustomerXMLString = js2xmlparser("cst:Customer", JSON.stringify(customerJson));
+    if (typeof customerJson['cst:Customer'] != 'undefined') {
+        var sourceCustomerXMLString = js2xmlparser("cst:CustomerList", JSON.stringify(customerJson));
+    } else {
+        var sourceCustomerXMLString = js2xmlparser("cst:Customer", JSON.stringify(customerJson));
+    }
 
     return sourceCustomerXMLString
 }
@@ -150,9 +151,6 @@ function getCustomerXML(customerJson) {
 function customerJsonUpdate(customerJson) {
     delete customerJson["__v"];
     delete customerJson["_id"];
-    
-    console.log("\n\ncustomerJson");
-    console.log(JSON.stringify(customerJson));
     
     jsonUtils.removeId(customerJson, 'cst:AddressList', 'cst:Address');
     jsonUtils.removeId(customerJson, 'cst:ContactDetails', 'cmn:Email');
@@ -178,7 +176,8 @@ function cleanUpCustomerJson(sourceJson) {
         }
     } else {
         customerJsonUpdate(localCustomers);
-        var myJsonString = {"cst:Customer" : [localCustomers]};
+//        var myJsonString = {"cst:Customer" : [localCustomers]};
+        var myJsonString = localCustomers;
     }
     
     return myJsonString;
