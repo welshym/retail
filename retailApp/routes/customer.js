@@ -116,7 +116,7 @@ router.post('/', function(req, res, next) {
                         if (err) return next(err);
                                    
                         res.set('Content-Type', 'text/xml');
-                        var cleanedUpJson = cleanUpCustomerJson(post[0]);
+                        var cleanedUpJson = cleanUpCustomerJson(post);
                         res.send(getCustomerXML(cleanedUpJson));
                     });
                 } else {
