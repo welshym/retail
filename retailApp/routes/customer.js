@@ -176,7 +176,6 @@ function cleanUpCustomerJson(sourceJson) {
         }
     } else {
         customerJsonUpdate(localCustomers);
-//        var myJsonString = {"cst:Customer" : [localCustomers]};
         var myJsonString = localCustomers;
     }
     
