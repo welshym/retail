@@ -39,8 +39,6 @@ router.get('/:id', function(req, res, next) {
     
     var searchIds = [req.params.id];
     
-           console.log("searchIds = ", searchIds);
-    
     Customer.findByCustomerId(searchIds, function (err, customers) {
         if (err) return next(err);
         
