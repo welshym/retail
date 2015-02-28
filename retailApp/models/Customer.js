@@ -41,7 +41,11 @@ var CustomerSchema = new mongoose.Schema(
                     },
         "cst:AddressList" : { "cst:Address" : [AddressSchema] },
         "cst:ContactDetails" : { "cmn:Email" : [EmailSchema] },
-        "cst:PreferencesList" : { "cst:Preference" : [PreferenceSchema] }
+        "cst:PreferencesList" : { "cst:Preference" : [PreferenceSchema] },
+        "flc:FalconDetails" : {
+                                "flc:SignedUp" : String,
+                                "flc:RenewalDate" : String,
+                                }
     });
 
 
