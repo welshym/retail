@@ -82,8 +82,9 @@ var OrderSchema = new mongoose.Schema(
                                                 },
                             "bsk:Value" : { "#" : String, "@" : { "currency" : String}},
                         },
-        "ord:FulfilmentList" : { "ord:Fulfilment" : [FulfilmentSchema] }
-    });
+//        "ord:FulfilmentList" : { "ord:Fulfilment" : [FulfilmentSchema] }
+        "ord:Fulfilment" : [FulfilmentSchema]
+});
 
 
 OrderSchema.static('findByBrand', function (searchBrand, callback) {
