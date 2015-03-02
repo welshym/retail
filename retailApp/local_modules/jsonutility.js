@@ -6,7 +6,8 @@ var replaceText = function (findText, replacementText, sourceString) {
 
 var updateJSONElementString = function (fullJson, jsonElementToUpdate, findText, replacementText) {
     
-    if (typeof fullJson[jsonElementToUpdate] == 'undefined') {
+    if ((typeof fullJson == 'undefined') ||
+        (typeof fullJson[jsonElementToUpdate] == 'undefined')) {
         return
     }
     
@@ -21,22 +22,21 @@ var isArray = function (what) {
     return Object.prototype.toString.call(what) === '[object Array]';
 }
 
-var makeIntoArray = function (fullJsonToModify, rootElement, changeElement) {
+var makeIntoArray = function (fullJsonToModify, changeElement) {
     
     if ((typeof fullJsonToModify == 'undefined') ||
-        (typeof fullJsonToModify[rootElement] == 'undefined') ||
-        (typeof fullJsonToModify[rootElement][changeElement] == 'undefined')){
+        (typeof fullJsonToModify[changeElement] == 'undefined')) {
         return
     }
     
-    if (!isArray(fullJsonToModify[rootElement][changeElement])) {
+    if (!isArray(fullJsonToModify[changeElement])) {
         
-        var myString = "[" + JSON.stringify(fullJsonToModify[rootElement][changeElement]) + "]";
+        var myString = "[" + JSON.stringify(fullJsonToModify[changeElement]) + "]";
         var myJsonString = JSON.parse(myString);
                 
-        delete fullJsonToModify [rootElement][changeElement];
+        delete fullJsonToModify[changeElement];
         
-        fullJsonToModify[rootElement][changeElement] = myJsonString;
+        fullJsonToModify[changeElement] = myJsonString;
     }
 }
 
@@ -66,18 +66,20 @@ var makeIntoArrayUsingValueOnly = function (fullJsonToModify, rootElement, chang
     fullJsonToModify[rootElement][changeElement] = myJsonString;
 }
 
-var removeId = function (jsonElement, rootElement, contentElement) {
-    if (typeof jsonElement[rootElement][contentElement] != 'undefined') {
-        if (isArray(jsonElement[rootElement][contentElement])) {
-            for (var removeCount = 0; removeCount < jsonElement[rootElement][contentElement].length; removeCount++) {
-                delete jsonElement[rootElement][contentElement][removeCount]["_id"];
+var removeId = function (jsonElement, contentElement) {
+    element = jsonElement[contentElement];
+    
+    if (typeof element != 'undefined') {
+        if (isArray(element)) {
+            for (var removeCount = 0; removeCount < element.length; removeCount++) {
+                delete element[removeCount]["_id"];
             }
         } else {
-            delete jsonElement[rootElement][contentElement]["_id"];
+            delete element["_id"];
         }
     }
     
-    return jsonElement;
+    return element;
 }
 
 var createErrorMessage = function (messageString, errorCode) {
