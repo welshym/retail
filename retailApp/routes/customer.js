@@ -94,17 +94,24 @@ router.post('/', function(req, res, next) {
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['cst:Customer']));
                               
-            jsonUtils.makeIntoArray(requestJson, 'cst:AddressList', 'cst:Address');
-            jsonUtils.makeIntoArray(requestJson, 'cst:ContactDetails', 'cmn:Email');
-            jsonUtils.makeIntoArray(requestJson, 'cst:PreferencesList', 'cst:Preference');
+            jsonUtils.makeIntoArray(requestJson['cst:AddressList'], 'cst:Address');
+            jsonUtils.makeIntoArray(requestJson['cst:ContactDetails'], 'cmn:Email');
+            jsonUtils.makeIntoArray(requestJson['cst:PreferencesList'], 'cst:Preference');
 
             jsonUtils.updateJSONElementString(requestJson['cst:ContactDetails'], 'cmn:Email', "type", "emailType");
             jsonUtils.updateJSONElementString(requestJson['cst:PreferencesList'], 'cst:Preference', "type", "preferenceType");
                               
             for (var i = 0; i < requestJson['cst:AddressList']['cst:Address'].length; i++) {
                 jsonUtils.updateJSONElementString(requestJson['cst:AddressList']['cst:Address'][i]['cst:ContactDetails'], 'cmn:Telephone', "type", "telephoneType");
-                jsonUtils.makeIntoArray(requestJson['cst:AddressList']['cst:Address'][i], 'cst:ContactDetails', 'cmn:Telephone');
+                jsonUtils.makeIntoArray(requestJson['cst:AddressList']['cst:Address'][i]['cst:ContactDetails'], 'cmn:Telephone');
             }
+                              
+            if (typeof requestJson['flc:FalconDetails'] == 'undefined') {
+                signedUp = { "flc:SignedUp" : false };
+                requestJson['flc:FalconDetails'] = signedUp;
+            }
+
+                              
             var localCustomer = new Customer(requestJson);
             
             Customer.findByCustomerId(result['cst:Customer']['cst:CustomerId'], function (err, customers) {
@@ -151,17 +158,28 @@ function getCustomerXML(customerJson) {
 function customerJsonUpdate(customerJson) {
     delete customerJson["__v"];
     delete customerJson["_id"];
-    
-    jsonUtils.removeId(customerJson, 'cst:AddressList', 'cst:Address');
-    jsonUtils.removeId(customerJson, 'cst:ContactDetails', 'cmn:Email');
-    jsonUtils.removeId(customerJson, 'cst:PreferencesList', 'cst:Preference');
+
+    if (typeof customerJson['flc:FalconDetails'] == 'undefined') {
+        signedUp = { "flc:SignedUp" : false };
+        customerJson['flc:FalconDetails'] = signedUp;
+    }
+
+    jsonUtils.removeId(customerJson['cst:AddressList'], 'cst:Address');
+    jsonUtils.removeId(customerJson['cst:ContactDetails'], 'cmn:Email');
+    jsonUtils.removeId(customerJson['cst:PreferencesList'], 'cst:Preference');
     
     for (var i = 0; i < customerJson['cst:AddressList']['cst:Address'].length; i++) {
         if (jsonUtils.isArray(customerJson['cst:AddressList']['cst:Address'][i]['cst:ContactDetails']['cmn:Telephone'])) {
-            jsonUtils.removeId(customerJson['cst:AddressList']['cst:Address'][i], 'cst:ContactDetails', 'cmn:Telephone');
+            jsonUtils.removeId(customerJson['cst:AddressList']['cst:Address'][i]['cst:ContactDetails'], 'cmn:Telephone');
         }
     }
 
+    jsonUtils.updateJSONElementString(customerJson['cst:ContactDetails'], 'cmn:Email', "emailType", "type");
+    jsonUtils.updateJSONElementString(customerJson['cst:PreferencesList'], 'cst:Preference', "preferenceType", "type");
+    
+    for (var i = 0; i < customerJson['cst:AddressList']['cst:Address'].length; i++) {
+        jsonUtils.updateJSONElementString(customerJson['cst:AddressList']['cst:Address'][i]['cst:ContactDetails'], 'cmn:Telephone', "telephoneType", "type");
+    }
 }
 
 

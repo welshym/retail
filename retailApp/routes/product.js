@@ -43,7 +43,6 @@ router.get('/', function(req, res, next) {
                         
                         if (products.length != 0) {
                              var cleanedUpJson = cleanUpProductJson(products);
-                             console.log(JSON.stringify(products));
                              shortenProductResponse(cleanedUpJson);
                              res.send(getProductXML(cleanedUpJson));
                         } else {
@@ -53,10 +52,7 @@ router.get('/', function(req, res, next) {
                 });
            
            }
-           
-           
-           
-           });
+});
 
 /* GET /product/id */
 router.get('/:id', function(req, res, next) {
@@ -139,46 +135,48 @@ router.post('/', function(req, res, next) {
             
             jsonUtils.updateJSONElementString(requestJson, "prd:DescriptionList", "type", "descriptionType");
             jsonUtils.updateJSONElementString(requestJson, "prd:PurchasingOptions", "type", "optionType");
-            jsonUtils.updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "contentType");
-            jsonUtils.updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "subContentType");
             jsonUtils.updateJSONElementString(requestJson, "prd:RelatedProducts", "type", "relatedType");
                               
-            jsonUtils.makeIntoArray(requestJson, 'prd:DescriptionList', 'prd:Description');
-            jsonUtils.makeIntoArray(requestJson, 'prd:PurchasingOptions', 'prd:Option');
-            jsonUtils.makeIntoArray(requestJson, 'prd:RelatedProducts', 'prd:Product');
+            jsonUtils.makeIntoArray(requestJson['prd:DescriptionList'], 'prd:Description');
+            jsonUtils.makeIntoArray(requestJson['prd:PurchasingOptions'], 'prd:Option');
+            jsonUtils.makeIntoArray(requestJson['prd:RelatedProducts'], 'prd:Product');
             
             if (jsonUtils.isArray(requestJson['prd:PricingInformation']['prc:Price'])) {
                 for (var i = 0; i < requestJson['prd:PricingInformation']['prc:Price'].length; i++) {
                     jsonUtils.updateJSONElementString(requestJson['prd:PricingInformation']['prc:Price'][i], "prc:Commentary", "type", "commentaryType");
-                    jsonUtils.makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], i, 'prc:Commentary');
+                    jsonUtils.makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'][i], 'prc:Commentary');
                 }
             } else {
                 jsonUtils.updateJSONElementString(requestJson['prd:PricingInformation']['prc:Price'], "prc:Commentary", "type", "commentaryType");
-                jsonUtils.makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price', 'prc:Commentary');
+                jsonUtils.makeIntoArray(requestJson['prd:PricingInformation']['prc:Price'], 'prc:Commentary');
             }
-            jsonUtils.makeIntoArray(requestJson, 'prd:PricingInformation', 'prc:Price');
+            jsonUtils.makeIntoArray(requestJson['prd:PricingInformation'], 'prc:Price');
             jsonUtils.updateJSONElementString(requestJson, "prd:PricingInformation", "type", "priceType");
                               
-            if (jsonUtils.isArray(requestJson['prd:AssociatedMedia']['prc:Content'])) {
-                for (var i = 0; i < requestJson['prd:AssociatedMedia']['prc:Content'].length; i++) {
-                    jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia']['prc:Content'], i, 'prd:SubContent');
+            if (jsonUtils.isArray(requestJson['prd:AssociatedMedia']['prd:Content'])) {
+                for (var i = 0; i < requestJson['prd:AssociatedMedia']['prd:Content'].length; i++) {
+                    jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia']['prd:Content'][i], 'prd:SubContent');
+                    jsonUtils.updateJSONElementString(requestJson['prd:AssociatedMedia']['prd:Content'][i], ['prd:SubContent'], "type", "subContentType");
                 }
             } else {
-                jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia'], 'prc:Content', 'prd:SubContent');
+                jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia']['prd:Content'], 'prd:SubContent');
+                jsonUtils.updateJSONElementString(requestJson['prd:AssociatedMedia']['prd:Content'], 'prd:SubContent', "type", "subContentType");
             }
-            jsonUtils.makeIntoArray(requestJson, 'prd:AssociatedMedia', 'prd:Content');
+            jsonUtils.makeIntoArray(requestJson['prd:AssociatedMedia'], 'prd:Content');
+            jsonUtils.updateJSONElementString(requestJson, "prd:AssociatedMedia", "type", "contentType");
 
             // Do we have any promotions?
             if (typeof requestJson['prm:RelatedPromotions'] != 'undefined') {
                 if (jsonUtils.isArray(requestJson['prm:RelatedPromotions']['prm:Promotion'])) {
                     for (var i = 0; i < requestJson['prm:RelatedPromotions']['prm:Promotion'].length; i++) {
-                        jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], i, 'prm:DescriptionList');
+                        jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'][i], 'prm:DescriptionList');
                     }
                 } else {
-                    jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions'], 'prm:Promotion', 'prm:DescriptionList');
+                    jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions']['prm:Promotion'], 'prm:DescriptionList');
                 }
-                jsonUtils.makeIntoArray(requestJson, 'prm:RelatedPromotions', 'prm:Promotion');
+                jsonUtils.makeIntoArray(requestJson['prm:RelatedPromotions'], 'prm:Promotion');
             }
+                             
                               
             var localProd = new Product(requestJson);
             
@@ -250,35 +248,35 @@ function productJsonUpdate(productJson) {
         productJson['prd:FalconEligible'] = 'false';
     }
 
-    jsonUtils.removeId(productJson, 'prd:DescriptionList', 'prd:Description');
+    jsonUtils.removeId(productJson['prd:DescriptionList'], 'prd:Description');
     jsonUtils.updateJSONElementString(productJson, "prd:DescriptionList", "descriptionType", "type");
     
-    jsonUtils.removeId(productJson, 'prd:PurchasingOptions', 'prd:Option');
+    jsonUtils.removeId(productJson['prd:PurchasingOptions'], 'prd:Option');
     jsonUtils.updateJSONElementString(productJson, "prd:PurchasingOptions", "optionType", "type");
     
-    jsonUtils.removeId(productJson, 'prd:PricingInformation', 'prc:Price');
+    jsonUtils.removeId(productJson['prd:PricingInformation'], 'prc:Price');
     jsonUtils.updateJSONElementString(productJson, "prd:PricingInformation", "priceType", "type");
 
     for (var j = 0; j < productJson['prd:PricingInformation']['prc:Price'].length; j++) {
-        jsonUtils.removeId(productJson['prd:PricingInformation']['prc:Price'], j, 'prc:Commentary');
+        jsonUtils.removeId(productJson['prd:PricingInformation']['prc:Price'][j], 'prc:Commentary');
     }
     jsonUtils.updateJSONElementString(productJson, "prd:PricingInformation", "commentaryType", "type");
     
-    jsonUtils.removeId(productJson, 'prd:AssociatedMedia', 'prd:Content');
+    jsonUtils.removeId(productJson['prd:AssociatedMedia'], 'prd:Content');
     jsonUtils.updateJSONElementString(productJson, "prd:AssociatedMedia", "contentType", "type");
     
     for (var j = 0; j < productJson['prd:AssociatedMedia']['prd:Content'].length; j++) {
-        jsonUtils.removeId(productJson['prd:AssociatedMedia']['prd:Content'], j, 'prd:SubContent');
+        jsonUtils.removeId(productJson['prd:AssociatedMedia']['prd:Content'][j], 'prd:SubContent');
     }
     jsonUtils.updateJSONElementString(productJson, "prd:AssociatedMedia", "subContentType", "type");
 
-    jsonUtils.removeId(productJson, 'prd:RelatedProducts', 'prd:Product');
+    jsonUtils.removeId(productJson['prd:RelatedProducts'], 'prd:Product');
     jsonUtils.updateJSONElementString(productJson, "prd:RelatedProducts", "relatedType", "type");
 
-    jsonUtils.removeId(productJson, 'prm:RelatedPromotions', 'prm:Promotion');
+    jsonUtils.removeId(productJson['prm:RelatedPromotions'], 'prm:Promotion');
     if (jsonUtils.isArray(productJson['prm:RelatedPromotions']['prm:Promotion'])) {
         for (var j = 0; j < productJson['prm:RelatedPromotions']['prm:Promotion'].length; j++) {
-            jsonUtils.removeId(productJson['prm:RelatedPromotions']['prm:Promotion'], j, 'prm:DescriptionList');
+            jsonUtils.removeId(productJson['prm:RelatedPromotions']['prm:Promotion'][j], 'prm:DescriptionList');
         }
     }
 }

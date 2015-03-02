@@ -118,16 +118,14 @@ router.post('/', function(req, res, next) {
     {
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['ord:Order']));
-            
+
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Telephone", "type", "telephoneType");
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Email", "type", "emailType");
             jsonUtils.updateJSONElementString(requestJson['bsk:Basket'], "bsk:ItemList", "type", "itemType");
             jsonUtils.updateJSONElementString(requestJson, "bsk:Basket", "type", "quantityType");
-            jsonUtils.makeIntoArray(requestJson['bsk:Basket'], 'bsk:ItemList', 'cmn:Item');
+            jsonUtils.makeIntoArray(requestJson['bsk:Basket']['bsk:ItemList'], 'cmn:Item');
                               
-            if ((typeof requestJson['ord:FulfilmentList'] == 'undefined') &&
-                (typeof requestJson['ord:Fulfilment'] != 'undefined') &&
-                (requestJson['ord:Fulfilment']['@']['type'] == 'Collection')) {
+              if (requestJson['ord:Fulfilment']['@']['type'] == 'Collection') {
                               
                 var collectionIdList = requestJson['ord:Fulfilment']['@']['collectionId'].split(",");
                 var fulfilmentArray = [];
@@ -155,13 +153,14 @@ router.post('/', function(req, res, next) {
                     
                     fulfilmentArray.push(locationFulfilmentItem)
                 }
-                var fulfilmentList = { "ord:Fulfilment" : fulfilmentArray };
-                requestJson['ord:FulfilmentList'] = fulfilmentList;
+                requestJson['ord:Fulfilment'] = fulfilmentArray;
             } else {
-                jsonUtils.makeIntoArray(requestJson, 'ord:FulfilmentList', 'ord:Fulfilment');
-                jsonUtils.updateJSONElementString(requestJson['ord:FulfilmentList'], "ord:Fulfilment", "type", "fulfilmentType");
+                jsonUtils.makeIntoArray(requestJson, 'ord:Fulfilment');
+                jsonUtils.updateJSONElementString(requestJson, "ord:Fulfilment", "type", "fulfilmentType");
             }
-            
+            console.log("\n\nrequestJson['ord:Fulfilment']");
+            console.log(JSON.stringify(requestJson['ord:Fulfilment']));
+                              
             requestJson['ord:EmailAddress'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Email']['#'];
             if (typeof requestJson['ord:LifeCycleDate'] == 'undefined') {
                 var currentDate = new Date(Date.now());
@@ -175,9 +174,6 @@ router.post('/', function(req, res, next) {
                 jsonUtils.convertIDToUri(requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i], "/product/argos", req);
             }
 
-            if (requestJson['ord:Fulfilment']['@']['fulfilmentType'] == "Collection") {
-                jsonUtils.convertIDToUri(requestJson['ord:Fulfilment']['loc:Store'], "/location/argos/store", req);
-            }
             var orderId = jsonUtils.convertIDToUri(requestJson, "/order/argos", req);
                               
             if (orderId == '') {
@@ -252,9 +248,9 @@ function orderJsonUpdate(orderJson) {
     delete orderJson["__v"];
     delete orderJson["_id"];
     
-    jsonUtils.removeId(orderJson['bsk:Basket'], 'bsk:ItemList', 'cmn:Item');
-    jsonUtils.removeId(orderJson, 'ord:FulfilmentList', 'ord:Fulfilment');
-    jsonUtils.updateJSONElementString(orderJson["ord:FulfilmentList"], "ord:Fulfilment", "fulfilmentType", "type");
+    jsonUtils.removeId(orderJson['bsk:Basket']['bsk:ItemList'], 'cmn:Item');
+    jsonUtils.removeId(orderJson, 'ord:Fulfilment');
+    jsonUtils.updateJSONElementString(orderJson, "ord:Fulfilment", "fulfilmentType", "type");
     jsonUtils.updateJSONElementString(orderJson, "cst:Customer", "emailType", "type");
     jsonUtils.updateJSONElementString(orderJson, "cst:Customer", "telephoneType", "type");
     jsonUtils.updateJSONElementString(orderJson["bsk:Basket"], "bsk:ItemList", "itemType", "type");
@@ -319,7 +315,7 @@ function updateOrderStatus (orderJson) {
         originalStatus = orderJson['ord:OrderStatus'];
     }
     
-    
+/*
     for (var i = 0; i < orderJson['ord:FulfilmentList']['ord:Fulfilment'].length; i++) {
         if (orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['@']['fulfilmentType'] == "Collection") {
             if (Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['cmn:LatestCollectionDate']) > expiryDate) {
@@ -328,6 +324,18 @@ function updateOrderStatus (orderJson) {
         } else {
             if (Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']) > expiryDate) {
                 expiryDate = Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']);
+            }
+            orderStatusClosed = "Delivered";
+        }
+    }*/
+    for (var i = 0; i < orderJson['ord:Fulfilment'].length; i++) {
+        if (orderJson['ord:Fulfilment'][i]['@']['fulfilmentType'] == "Collection") {
+            if (Date.parse(orderJson['ord:Fulfilment'][i]['cmn:LatestCollectionDate']) > expiryDate) {
+                expiryDate = Date.parse(orderJson['ord:Fulfilment'][i]['cmn:LatestCollectionDate']);
+            }
+        } else {
+            if (Date.parse(orderJson['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']) > expiryDate) {
+                expiryDate = Date.parse(orderJson['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']);
             }
             orderStatusClosed = "Delivered";
         }
@@ -368,7 +376,7 @@ function createGetQueryArray (req) {
     if (typeof req.query['storeId'] != 'undefined') {
         var storeId = [];
         storeId = storeId.concat(req.query['storeId']);
-        storeIdQuery = { "ord:FulfilmentList.ord:Fulfilment.loc:Store.@.uri" : new RegExp(storeId, "g")  };
+        storeIdQuery = { "ord:Fulfilment.loc:Store.@.uri" : new RegExp(storeId, "g")  };
         queryArray.push(storeIdQuery);
     }
     
