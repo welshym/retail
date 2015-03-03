@@ -315,19 +315,6 @@ function updateOrderStatus (orderJson) {
         originalStatus = orderJson['ord:OrderStatus'];
     }
     
-/*
-    for (var i = 0; i < orderJson['ord:FulfilmentList']['ord:Fulfilment'].length; i++) {
-        if (orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['@']['fulfilmentType'] == "Collection") {
-            if (Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['cmn:LatestCollectionDate']) > expiryDate) {
-                expiryDate = Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['cmn:LatestCollectionDate']);
-            }
-        } else {
-            if (Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']) > expiryDate) {
-                expiryDate = Date.parse(orderJson['ord:FulfilmentList']['ord:Fulfilment'][i]['dlv:Delivery']['dlv:DeliveryDetails']['dlv:DeliveryGroup']['dlv:DeliverySlot']['dlv:DeliveryTime']['dlv:End']);
-            }
-            orderStatusClosed = "Delivered";
-        }
-    }*/
     for (var i = 0; i < orderJson['ord:Fulfilment'].length; i++) {
         if (orderJson['ord:Fulfilment'][i]['@']['fulfilmentType'] == "Collection") {
             if (Date.parse(orderJson['ord:Fulfilment'][i]['cmn:LatestCollectionDate']) > expiryDate) {
