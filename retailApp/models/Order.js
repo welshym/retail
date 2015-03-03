@@ -82,7 +82,6 @@ var OrderSchema = new mongoose.Schema(
                                                 },
                             "bsk:Value" : { "#" : String, "@" : { "currency" : String}},
                         },
-//        "ord:FulfilmentList" : { "ord:Fulfilment" : [FulfilmentSchema] }
         "ord:Fulfilment" : [FulfilmentSchema]
 });
 
