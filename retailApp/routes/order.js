@@ -121,20 +121,30 @@ router.post('/', function(req, res, next) {
 
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Telephone", "type", "telephoneType");
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Email", "type", "emailType");
-            jsonUtils.updateJSONElementString(requestJson['bsk:Basket'], "bsk:ItemList", "type", "itemType");
-            jsonUtils.updateJSONElementString(requestJson, "bsk:Basket", "type", "quantityType");
             jsonUtils.makeIntoArray(requestJson['bsk:Basket']['bsk:ItemList'], 'cmn:Item');
+            
+            for (var i = 0; i < requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'].length; i++) {
+                jsonUtils.updateJSONElementString(requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i], '@', "type", "itemType");
+                jsonUtils.updateJSONElementString(requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i], 'cmn:Quantity', "type", "quantityType");
+                var quantityJson = {};
+                for (var j = 0; j < requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:Quantity'].length; j++) {
+                    if (requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:Quantity'][j]['@']['quantityType'] ="reserved") {
+                              quantityJson = {  "@" : { "quantityType" : requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:Quantity'][j]['@']['quantityType']},
+                              "#" : requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:Quantity'][j]['#'] };
+                        break;
+                    }
+                }
+                delete requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:Quantity'];
+                requestJson['bsk:Basket']['bsk:ItemList']['cmn:Item'][i]['cmn:Quantity'] = quantityJson;
+            }
                               
-              if (requestJson['ord:Fulfilment']['@']['type'] == 'Collection') {
-                              
+            if (requestJson['ord:Fulfilment']['@']['type'] == 'Collection') {
                 var collectionIdList = requestJson['ord:Fulfilment']['@']['collectionId'].split(",");
                 var fulfilmentArray = [];
                 for (var i = 0; i < collectionIdList.length; i++) {
                               
                     // Turn the ID into a URI if required
                     var storeId = jsonUtils.convertIDToUri(requestJson['ord:Fulfilment']['loc:Store'], "/location/argos/store", req);
-                              
-                    console.log(JSON.stringify(requestJson['ord:Fulfilment']['loc:Store']['@']));
                               
                     var locationFulfilmentItem = {
                         "@" :   {
@@ -158,8 +168,6 @@ router.post('/', function(req, res, next) {
                 jsonUtils.makeIntoArray(requestJson, 'ord:Fulfilment');
                 jsonUtils.updateJSONElementString(requestJson, "ord:Fulfilment", "type", "fulfilmentType");
             }
-            console.log("\n\nrequestJson['ord:Fulfilment']");
-            console.log(JSON.stringify(requestJson['ord:Fulfilment']));
                               
             requestJson['ord:EmailAddress'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Email']['#'];
             if (typeof requestJson['ord:LifeCycleDate'] == 'undefined') {
@@ -189,17 +197,20 @@ router.post('/', function(req, res, next) {
                               
             updateOrderStatus(requestJson);
                               
-                              
-                              console.log(JSON.stringify(requestJson));
-                              
             var localOrder = new Order(requestJson);
             var orderIds = [requestJson['ord:OrderId']];
             Order.findByOrderId(orderIds, function (err, order) {
                 if ((typeof order == 'undefined') || (order.length == 0)) {
+                                
                     localOrder.save(function (err, post) {
                         if (err) return next(err);
                                    
                         res.set('Content-Type', 'text/xml');
+                                    
+                                    
+                                    console.log("\n\nquantity type");
+                                    console.log(JSON.stringify(post['bsk:Basket']['bsk:ItemList']['cmn:Item'][0]['cmn:Quantity']));
+
                         var responseString = cleanUpOrderJson(post);
                         responseString = getOrderXML(responseString);
                         res.send(responseString);
@@ -254,6 +265,7 @@ function orderJsonUpdate(orderJson) {
     jsonUtils.updateJSONElementString(orderJson, "cst:Customer", "emailType", "type");
     jsonUtils.updateJSONElementString(orderJson, "cst:Customer", "telephoneType", "type");
     jsonUtils.updateJSONElementString(orderJson["bsk:Basket"], "bsk:ItemList", "itemType", "type");
+    jsonUtils.updateJSONElementString(orderJson["bsk:Basket"], "bsk:ItemList", "quantityType", "type");
     jsonUtils.updateJSONElementString(orderJson, "ord:LifeCycleDate", "lifeCycleDateType", "type");
 
 }
