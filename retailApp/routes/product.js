@@ -38,17 +38,31 @@ router.get('/', function(req, res, next) {
 
            }
            else {
+                var pageNumber = 1; // Default
+                var pageSize = 5; // Default
+           
+                if (typeof req.query['pageNumber'] != 'undefined') {
+                    pageNumber = req.query['pageNumber'];
+                    if (pageNumber <= 0) {
+                        var messageStr = "Invalid page number.";
+                        res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
+                        return;
+                    }
+                }
+           
+                if (typeof req.query['pageSize'] != 'undefined') {
+                    pageSize = req.query['pageSize'];
+                    if (pageSize <= 0) {
+                        var messageStr = "Invalid page size.";
+                        res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
+                        return;
+                    }
+                }
+           
                 Product.find(function (err, products) {
                         if (err) return next(err);
                         
-                        if (products.length != 0) {
-                             var cleanedUpJson = cleanUpProductJson(products);
-                             shortenProductResponse(cleanedUpJson);
-                             res.send(getProductXML(cleanedUpJson));
-                        } else {
-                             var messageStr = "Products not found";
-                             res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
-                        }
+                        createProductGetResponse(req, res, pageSize, pageNumber, products);
                 });
            
            }
@@ -204,7 +218,7 @@ router.post('/', function(req, res, next) {
 
 
 
-function getProductXML(productJson) {
+function getProductXML(productJson, totalResults, resultsPerPage, pageCount, position) {
     
     var sourceLongHTMLJS = [];
     var options = {
@@ -236,6 +250,16 @@ function getProductXML(productJson) {
         sourceProductXMLString = sourceProductXMLString.replace("MCWTEST" + i, "");
     }
 
+    if (typeof totalResults != 'undefined') {
+        var pageData = "totalResults=\"" + totalResults + "\"";
+        pageData += " resultsPerPage=\"" + resultsPerPage + "\"";
+        pageData += " pageCount=\"" + pageCount + "\"";
+        pageData += " position=\"" + position + "\">";
+        
+        sourceProductXMLString = jsonUtils.replaceText("<prd:ProductList>", "<prd:ProductList " + pageData, sourceProductXMLString.toString());
+    }
+
+    
     return sourceProductXMLString
 }
 
@@ -314,6 +338,19 @@ function removeProductArrayElements(productsJson) {
     }
     
 }
+
+
+function createProductGetResponse (request, response, pageSize, pageNumber, products) {
+    if (products.length != 0) {
+        var pagedProducts = jsonUtils.pageResults(products, pageSize, pageNumber);
+        var cleanedUpJson = cleanUpProductJson(pagedProducts);
+        response.send(getProductXML(cleanedUpJson, products.length, pageSize > cleanedUpJson['prd:Product'].length? cleanedUpJson['prd:Product'].length : pageSize, Math.ceil(products.length/pageSize),((pageNumber-1)*pageSize) + 1));
+    } else {
+        var messageStr = "Products not found";
+        res.status(404).send(jsonUtils.createErrorMessage (messageStr, "404"));
+    }
+}
+
 
 function shortenProductResponse(fullProductJson) {
     
