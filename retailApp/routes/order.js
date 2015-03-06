@@ -196,8 +196,10 @@ router.post('/', function(req, res, next) {
             }
             requestJson['ord:OrderId'] = orderId;
                               
-            if (typeof requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'] != 'undefined') {
-                requestJson['cmn:Telephone'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'];
+            if (typeof requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone'] != 'undefined') {
+                if (typeof requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'] != 'undefined') {
+                    requestJson['cmn:Telephone'] = requestJson['cst:Customer']['cst:ContactDetails']['cmn:Telephone']['#'];
+                }
             }
                               
             updateOrderStatus(requestJson);
