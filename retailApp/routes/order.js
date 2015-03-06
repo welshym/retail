@@ -114,6 +114,8 @@ router.delete('/', function(req, res, next) {
 router.post('/', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.order; version=2; format=xml ; charset=UTF-8');
     res.set('Cache-Control', 'no-cache');
+            
+            console.log("Made it into post");
     if (JSON.stringify(req.body) == '{}')
     {
         xmlParser.parseString(req.rawData, function (err, result) {
