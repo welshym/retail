@@ -118,6 +118,9 @@ router.post('/', function(req, res, next) {
     {
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['ord:Order']));
+                              
+                              
+                              console.log(JSON.stringify(requestJson));
 
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Telephone", "type", "telephoneType");
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Email", "type", "emailType");
@@ -196,7 +199,8 @@ router.post('/', function(req, res, next) {
             }
                               
             updateOrderStatus(requestJson);
-                              
+                
+                              console.log(JSON.stringify(requestJson));
             var localOrder = new Order(requestJson);
             var orderIds = [requestJson['ord:OrderId']];
             Order.findByOrderId(orderIds, function (err, order) {
