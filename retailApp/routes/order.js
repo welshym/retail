@@ -115,14 +115,10 @@ router.post('/', function(req, res, next) {
     res.set('Content-Type', 'application/vnd.homeretailgroup.order; version=2; format=xml ; charset=UTF-8');
     res.set('Cache-Control', 'no-cache');
             
-            console.log("Made it into post");
     if (JSON.stringify(req.body) == '{}')
     {
         xmlParser.parseString(req.rawData, function (err, result) {
             var requestJson = JSON.parse(JSON.stringify(result['ord:Order']));
-                              
-                              
-                              console.log(JSON.stringify(requestJson));
 
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Telephone", "type", "telephoneType");
             jsonUtils.updateJSONElementString(requestJson['cst:Customer']['cst:ContactDetails'], "cmn:Email", "type", "emailType");
@@ -204,7 +200,6 @@ router.post('/', function(req, res, next) {
                               
             updateOrderStatus(requestJson);
                 
-                              console.log(JSON.stringify(requestJson));
             var localOrder = new Order(requestJson);
             var orderIds = [requestJson['ord:OrderId']];
             Order.findByOrderId(orderIds, function (err, order) {
@@ -214,14 +209,10 @@ router.post('/', function(req, res, next) {
                         if (err) return next(err);
                                    
                         res.set('Content-Type', 'text/xml');
-                                    
-                                    
-                                    console.log("\n\nquantity type");
-                                    console.log(JSON.stringify(post['bsk:Basket']['bsk:ItemList']['cmn:Item'][0]['cmn:Quantity']));
 
                         var responseString = cleanUpOrderJson(post);
                         responseString = getOrderXML(responseString);
-                        res.send(responseString);
+                        res.status(201).send(responseString);
                     });
                 } else {
                     var messageStr = "Order " + requestJson['ord:OrderId'] + " already exists";
