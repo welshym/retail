@@ -201,7 +201,7 @@ router.post('/', function(req, res, next) {
                         if (err) return next(err);
                                    
                         res.set('Content-Type', 'text/xml');
-                        res.send(getProductXML(cleanUpProductJson(post)));
+                        res.status(201).send(getProductXML(cleanUpProductJson(post)));
                     });
                 } else {
                     var messageStr = "Product " + requestJson['prd:ProductId'] + " already exists";
