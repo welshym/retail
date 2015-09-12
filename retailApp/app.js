@@ -59,7 +59,7 @@ var myRawParser = function(req, res, next){
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-// uncomment after placing your favicon in /public
+// uncomment after placing your favicon in /public maybe
 //app.use(favicon(__dirname + '/public/favicon.ico'));
 app.use(compress());
 app.use(logger('dev'));
