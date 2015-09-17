@@ -1,4 +1,4 @@
-// Adding comment field
+// Adding comment field to be modified
 var compress = require('compression');
 var express = require('express');
 var path = require('path');
